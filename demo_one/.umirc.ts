@@ -50,6 +50,7 @@ export default defineConfig({
   hash: true,
   jsMinifier: 'terser',
   jsMinifierOptions: {
-    target: ['chrome80', 'es2020']
-  },
-});
+    ecma: 2020,
+    compress: {
+      drop_console: true,
+    },
