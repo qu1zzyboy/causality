@@ -51,4 +51,8 @@ export default defineConfig({
       });
   },
   hash: true,
+  jsMinifier: 'terser',
+  jsMinifierOptions: {
+    target: ['chrome80', 'es2020']
+  },
 });
