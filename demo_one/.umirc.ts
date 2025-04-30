@@ -13,12 +13,9 @@ export default defineConfig({
       routes: [
         {
           path: "/",
-          redirect: "/home",
+          redirect: "/vote",
         },
-        {
-          path: "/home",
-          component: "@/pages/home",
-        },
+        
         {
           path: "/vote",
           component: "@/pages/vote",

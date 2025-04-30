@@ -4,6 +4,7 @@ import { Link } from '@umijs/max';
 import { HomeOutlined, CalculatorOutlined, CheckSquareOutlined, AlignLeftOutlined, AppstoreOutlined, DeploymentUnitOutlined } from '@ant-design/icons';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { mainnet } from 'viem/chains';
+import WalletConnect from '@/components/WalletConnect';
 
 const { Header, Content, Sider } = Layout;
 
@@ -26,8 +27,9 @@ export default function CustomLayout() {
       }}
     >
       <Layout style={{ minHeight: '100vh' }}>
-        <Header style={{ display: 'flex', alignItems: 'center', background: '#fff', padding: '0 24px' }}>
+        <Header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '0 24px' }}>
           <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Causality Graph</div>
+          <WalletConnect />
         </Header>
         <Layout>
           <Sider width={200} style={{ background: '#fff' }}>
@@ -36,9 +38,7 @@ export default function CustomLayout() {
               defaultSelectedKeys={['1']}
               style={{ height: '100%', borderRight: 0 }}
             >
-              <Menu.Item key="1" icon={<HomeOutlined />}>
-                <Link to="/">Home</Link>
-              </Menu.Item>
+
               <Menu.Item key="2" icon={<CheckSquareOutlined />}>
                 <Link to="/vote">DeGovernance</Link>
               </Menu.Item>

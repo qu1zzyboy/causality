@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, Upload, message, Select, Tooltip, Typography } from 'antd';
-import { UploadOutlined, CaretDownOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { UploadOutlined, CaretDownOutlined, InfoCircleOutlined, PictureOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
 import { nostrService } from '@/services/nostr';
 import { usePrivy } from '@privy-io/react-auth';
@@ -16,6 +16,7 @@ interface Template {
   description: string;
   ops: string;
   rules: string;
+  imageURL: string;
 }
 
 interface Templates {
@@ -28,7 +29,8 @@ const templates: Templates = {
     name: 'ModelDAO',
     description: 'Standard ModelDAO template with predefined permission levels',
     ops: 'post=1,propose=2,vote=3,invite=4',
-    rules: 'Standard DAO rules'
+    rules: 'Standard DAO rules',
+    imageURL: '/image.png'
   }
 };
 
@@ -83,8 +85,6 @@ const CreateSubspace = () => {
     if (value && templates[value]) {
       const template = templates[value];
       form.setFieldsValue({
-        name: template.name,
-        description: template.description,
         ops: template.ops,
         rules: template.rules
       });
@@ -106,7 +106,7 @@ const CreateSubspace = () => {
         ops: values.ops,
         rules: values.rules,
         description: values.description,
-        imageURL: 'https://example.com/image.jpg'
+        imageURL: values.imageURL || '/image.png'
       });
       console.log('2. Subspace event created:', JSON.stringify(subspaceEvent, null, 2));
 
@@ -196,6 +196,27 @@ const CreateSubspace = () => {
             rules={[{ required: true, message: 'Please input the subspace name!' }]}
           >
             <Input placeholder="Enter subspace name" />
+          </Form.Item>
+
+          <Form.Item
+            label="Image URL"
+            name="imageURL"
+            rules={[{ required: true, message: 'Please input the image URL!' }]}
+            tooltip="Enter a URL for the subspace image"
+          >
+            <Input 
+              placeholder="Enter image URL" 
+              prefix={<PictureOutlined />}
+              addonAfter={
+                <Button 
+                  type="link" 
+                  onClick={() => window.open(form.getFieldValue('imageURL'), '_blank')}
+                  disabled={!form.getFieldValue('imageURL')}
+                >
+                  Preview
+                </Button>
+              }
+            />
           </Form.Item>
 
           <Form.Item
