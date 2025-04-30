@@ -54,3 +54,5 @@ export default defineConfig({
     compress: {
       drop_console: true,
     },
+  },
+});
