@@ -1,12 +1,12 @@
 import { Outlet } from '@umijs/max';
 import { Layout, Menu } from 'antd';
 import { Link } from '@umijs/max';
-import { HomeOutlined, CalculatorOutlined, CheckSquareOutlined, AlignLeftOutlined, AppstoreOutlined, DeploymentUnitOutlined } from '@ant-design/icons';
+import { HomeOutlined, CalculatorOutlined, CheckSquareOutlined, AlignLeftOutlined, AppstoreOutlined, DeploymentUnitOutlined, UserOutlined, SettingOutlined } from '@ant-design/icons';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { mainnet } from 'viem/chains';
 import WalletConnect from '@/components/WalletConnect';
-
 const { Header, Content, Sider } = Layout;
+import "./index.less"
 
 export default function CustomLayout() {
   return (
@@ -26,43 +26,41 @@ export default function CustomLayout() {
         supportedChains: [mainnet],
       }}
     >
-      <Layout style={{ minHeight: '100vh' }}>
-        <Header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '0 24px' }}>
-          <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Causality Graph</div>
-          <WalletConnect />
-        </Header>
+      <Layout className="main-layout">
+        <Sider width={200} className="main-sider">
+          <div className="sider-title">Causality Graph</div>
+          <Menu
+            mode="inline"
+            defaultSelectedKeys={['6']}
+            style={{ height: 'calc(100% - 70px)', borderRight: 0 }}
+            theme="dark"
+          >
+            <Menu.Item key="1" icon={<HomeOutlined />}>
+              <Link to="/home">Home</Link>
+            </Menu.Item>
+            <Menu.Item key="2" icon={<CheckSquareOutlined />}>
+              <Link to="/vote">DeGovernance</Link>
+            </Menu.Item>
+            <Menu.Item key="4" icon={<DeploymentUnitOutlined />}>
+              <Link to="/causalitygraph">CausalityGraph</Link>
+            </Menu.Item>
+            <Menu.Item key="5" icon={<DeploymentUnitOutlined />}>
+              <Link to="/model">Model</Link>
+            </Menu.Item>
+            <Menu.Item key="6" icon={<UserOutlined />}>
+              <Link to="/profile">Profile</Link>
+            </Menu.Item>
+          </Menu>
+        </Sider>
         <Layout>
-          <Sider width={200} style={{ background: '#fff' }}>
-            <Menu
-              mode="inline"
-              defaultSelectedKeys={['1']}
-              style={{ height: '100%', borderRight: 0 }}
-            >
-              <Menu.Item key="1" icon={<HomeOutlined />}>
-                <Link to="/home">Home</Link>
-              </Menu.Item>
-              <Menu.Item key="2" icon={<CheckSquareOutlined />}>
-                <Link to="/vote">DeGovernance</Link>
-              </Menu.Item>
-              <Menu.Item key="4" icon={<DeploymentUnitOutlined />}>
-                <Link to="/causalitygraph">CausalityGraph</Link>
-              </Menu.Item>
-              <Menu.Item key="5" icon={<DeploymentUnitOutlined />}>
-                <Link to="/model">Model</Link>
-              </Menu.Item>
-            </Menu>
-          </Sider>
-          <Layout style={{ padding: '24px' }}>
-            <Content
-              style={{
-                padding: 24,
-                margin: 0,
-                minHeight: 280,
-                background: '#fff',
-              }}
-            >
-              <Outlet />
-            </Content>
+          <Header className="main-header">
+            <div className="header-actions-wrapper">
+              <SettingOutlined className="settings-icon" />
+              <WalletConnect />
+            </div>
+          </Header>
+          <Layout className="main-content">
+            <Outlet/>
           </Layout>
         </Layout>
       </Layout>

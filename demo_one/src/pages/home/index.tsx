@@ -1,135 +1,71 @@
 import React from 'react';
-import { Card, Avatar, Row, Col, Typography, Statistic, Alert, Button } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
-import { usePrivy } from '@privy-io/react-auth';
+import { Row, Col, Card, Typography, Input, Button, Avatar, Space } from 'antd';
+import { SendOutlined, WechatOutlined } from '@ant-design/icons'; // Placeholder for H logo
 import styles from './index.less';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
-interface SubspaceCard {
-  id: string;
-  name: string;
-  image: string;
-  proposalCount: number;
-  voteCount: number;
-}
+const suggestionPrompts = [
+  {
+    title: 'Help me find information or answer a question',
+    description: 'Quick info, answers, or help searching',
+  },
+  {
+    title: 'Help me build my AI Avatar!',
+    description: 'Quick info, answers, or help searching',
+  },
+  {
+    title: 'What can I do today?',
+    description: 'Discover tasks, missions, and rewards.',
+  },
+];
 
 const HomePage: React.FC = () => {
-  const { authenticated, ready } = usePrivy();
+  return (
+    <div className={styles.homePageContainer}>
+      {/* Top Logo and Title Area */}
+      <div className={styles.logoTitleSection}>
+        <Avatar size={64} className={styles.hetuLogo}>
+          H
+        </Avatar>
+        <Title level={1} className={styles.mainTitle}>
+          Hetu
+        </Title>
+        <Text className={styles.subTitle}>AI Avatar</Text>
+      </div>
 
-  // Mock data - replace with actual data from your backend
-  const userProfile = {
-    name: 'John Doe',
-    avatar: 'https://example.com/avatar.jpg',
-  };
+      {/* Suggestion Cards Section */}
+      <Row gutter={[24, 24]} className={styles.suggestionCardsRow} justify="center">
+        {[1, 2, 3].map((item) => (
+          <Col key={item} xs={24} sm={24} md={12} lg={8}>
+            <Card className={styles.suggestionCard} bordered={false}>
+              <Title level={4} className={styles.cardTitle}>
+                Talk to Hetu Agent – Try asking:
+              </Title>
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                {suggestionPrompts.map((prompt, index) => (
+                  <div key={index} className={styles.promptBox}>
+                    <Text strong>{prompt.title}</Text>
+                    <Paragraph type="secondary" className={styles.promptDescription}>
+                      {prompt.description}
+                    </Paragraph>
+                  </div>
+                ))}
+              </Space>
+            </Card>
+          </Col>
+        ))}
+      </Row>
 
-  const participationStats = {
-    totalKeys: 5,
-    proposalCount: 12,
-    voteCount: 45,
-    inviteCount: 8,
-  };
-
-  const userSubspaces: SubspaceCard[] = [
-    {
-      id: '1',
-      name: 'AI Research',
-      image: 'https://example.com/subspace1.jpg',
-      proposalCount: 5,
-      voteCount: 23,
-    },
-    {
-      id: '2',
-      name: 'Blockchain Development',
-      image: 'https://example.com/subspace2.jpg',
-      proposalCount: 3,
-      voteCount: 15,
-    },
-  ];
-
-  if (!ready) {
-    return <div>Loading...</div>;
-  }
-
-  if (!authenticated) {
-    return (
-      <div className={styles.container}>
-        <Alert
-          message="Wallet Connection Required"
-          description="Please connect your wallet to view your profile and participation details."
-          type="warning"
-          showIcon
-          style={{ marginBottom: 24 }}
+      {/* Bottom Send Message Bar */}
+      <div className={styles.sendMessageBar}>
+        <Input
+          size="large"
+          placeholder="Send a message"
+          className={styles.messageInput}
+          suffix={<Button type="text" icon={<SendOutlined />} className={styles.sendButton} />}
         />
       </div>
-    );
-  }
-
-  return (
-    <div className={styles.container}>
-      {/* User Profile Section */}
-      <Card className={styles.profileCard}>
-        <div className={styles.profileContent}>
-          <Avatar
-            size={64}
-            src={userProfile.avatar}
-            icon={<UserOutlined />}
-          />
-          <Title level={3} className={styles.userName}>
-            {userProfile.name}
-          </Title>
-        </div>
-      </Card>
-
-      {/* Participation Stats Section */}
-      <Card className={styles.statsCard}>
-        <Title level={4}>Your Participation</Title>
-        <Row gutter={[16, 16]}>
-          <Col span={6}>
-            <Statistic title="Total Keys" value={participationStats.totalKeys} />
-          </Col>
-          <Col span={6}>
-            <Statistic title="Proposals" value={participationStats.proposalCount} />
-          </Col>
-          <Col span={6}>
-            <Statistic title="Votes" value={participationStats.voteCount} />
-          </Col>
-          <Col span={6}>
-            <Statistic title="Invites" value={participationStats.inviteCount} />
-          </Col>
-        </Row>
-      </Card>
-
-      {/* Subspaces Section */}
-      <Card className={styles.subspacesCard}>
-        <Title level={4}>Your Subspaces</Title>
-        <Row gutter={[16, 16]}>
-          {userSubspaces.map((subspace) => (
-            <Col span={8} key={subspace.id}>
-              <Card
-                hoverable
-                cover={<img alt={subspace.name} src={subspace.image} />}
-              >
-                <Card.Meta
-                  title={subspace.name}
-                  description={
-                    <div>
-                      <Text>Proposals: {subspace.proposalCount}</Text>
-                      <br />
-                      <Text>Votes: {subspace.voteCount}</Text>
-                    </div>
-                  }
-                />
-                <div style={{ marginTop: 16, textAlign: 'center' }}>
-                  <Button type="primary">
-                    Token Launch
-                  </Button>
-                </div>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      </Card>
     </div>
   );
 };

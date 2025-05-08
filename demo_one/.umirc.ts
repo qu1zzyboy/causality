@@ -13,7 +13,7 @@ export default defineConfig({
       routes: [
         {
           path: "/",
-          redirect: "/vote",
+          redirect: "/home",
         },
         
         {
@@ -45,6 +45,10 @@ export default defineConfig({
           component: "@/pages/model/create",
         },
         {
+          path: "/profile",
+          component: "@/pages/profile",
+        },
+        {
           path: "/home",
           component: "@/pages/home",
         }
@@ -71,4 +75,5 @@ export default defineConfig({
       drop_console: true,
     },
   },
+  lessLoader: {},
 });
