@@ -10,7 +10,7 @@ interface Event {
 
 export class EventAPIService {
     private static instance: EventAPIService;
-    private baseURL: string = 'http://18.143.76.146:8080';
+    private baseURL: string = 'https://events.teeml.ai/api';
     private maxRetries: number = 3;
     private retryDelay: number = 1000; // 1秒
 

@@ -44,7 +44,7 @@ const CreateSubspace = () => {
   useEffect(() => {
     const connectRelay = async () => {
       try {
-        const relayURL = 'ws://18.143.76.146:10547';
+        const relayURL = 'wss://events.teeml.ai';
         console.log('Connecting to relay...');
         const relay = await Relay.connect(relayURL);
         console.log(`Connected to ${relay.url}`);

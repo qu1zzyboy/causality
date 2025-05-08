@@ -38,12 +38,11 @@ export default function CustomLayout() {
               defaultSelectedKeys={['1']}
               style={{ height: '100%', borderRight: 0 }}
             >
-
+              <Menu.Item key="1" icon={<HomeOutlined />}>
+                <Link to="/home">Home</Link>
+              </Menu.Item>
               <Menu.Item key="2" icon={<CheckSquareOutlined />}>
                 <Link to="/vote">DeGovernance</Link>
-              </Menu.Item>
-              <Menu.Item key="3" icon={<AlignLeftOutlined />}>
-                <Link to="/alignment">Alignment</Link>
               </Menu.Item>
               <Menu.Item key="4" icon={<DeploymentUnitOutlined />}>
                 <Link to="/causalitygraph">CausalityGraph</Link>

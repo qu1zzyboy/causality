@@ -37,7 +37,7 @@ export class NostrService {
     private secretKey: string | null = null;
     private publicKey: string | null = null;
 
-    constructor(private relayURL: string = 'ws://161.97.129.166:10547') {
+    constructor(private relayURL: string = 'wss://relay.teeml.ai') {
         // Initialize WebSocket implementation
         if (typeof window !== 'undefined') {
             const WebSocket = window.WebSocket;

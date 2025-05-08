@@ -43,6 +43,10 @@ export default defineConfig({
         {
           path:"/model/create",
           component: "@/pages/model/create",
+        },
+        {
+          path: "/home",
+          component: "@/pages/home",
         }
       ],
     },
