@@ -52,7 +52,6 @@ const WalletConnect: React.FC = () => {
       onClick={handleConnect}
       style={{
         marginRight: '20px',
-        marginTop: '16px',
         float: 'right'
       }}
     >

@@ -3,6 +3,7 @@ import { Card, Button, Statistic, message } from "antd";
 import { FileTextOutlined, MessageOutlined, PlusOutlined } from "@ant-design/icons";
 import { history } from '@umijs/max';
 import { eventAPIService } from '@/services/eventAPI';
+import planetIcon from '../../assets/planet.png';
 import './index.less';
 
 interface SubspaceCardProps {
@@ -138,15 +139,10 @@ const Vote = () => {
   return (
     <div className="vote-page">
       <div className="page-header">
-        <h1 className="page-title">Subspaces</h1>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={handleCreateSubspace}
-          className="create-button"
-        >
-          Create Subspace
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <img src={planetIcon} alt="planet icon" style={{ marginRight: '8px', height: '24px' }} />
+          <h1 className="page-title">Subspaces</h1>
+        </div>
       </div>
       <div className="subspace-grid">
         {subspaces.map((subspace) => (

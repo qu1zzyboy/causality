@@ -6,19 +6,93 @@
 .main-header {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   padding: 0 24px;
   color: black;
-  background: white;
+  background-color: #f7f8fc;
   backdrop-filter: blur(10px);
-  .settings-icon{
-    font-size:16px;
-    cursor: pointer;
-    padding-right: 20px;
-  }
+  
+  /* Default: only actions on the right */
+  justify-content: flex-end;
 }
 
+.main-header.with-search {
+  justify-content: space-between; /* Space between left section and right actions */
+}
+.header-actions-wrapper{
+  display: flex;
+  align-items: center;
+}
+.header-left-section {
+  display: flex;
+  align-items: center;
+  flex-grow: 1; /* Allow this section to take available space if needed */
+}
 
+.header-search-bar {
+  display: flex;
+  align-items: center;
+  background-color: #e9ecef;
+  padding: 6px 12px;
+  border-radius: 6px;
+  min-width: 180px; /* Adjusted min-width */
+  flex-grow: 0.5;
+  max-width: 350px; /* Adjusted max-width */
+  margin-right: 12px; /* Add margin to the right of search bar, before plus icon */
+}
+
+.header-plus-icon-btn {
+  background-color: #2c3e50 !important; /* Dark, almost black */
+  color: #fff !important; /* White plus icon */
+  border: none !important;
+  width: 32px; /* Circle size */
+  height: 32px; /* Circle size */
+  border-radius: 50%; /* Make it a circle */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px; /* Size of the PlusOutlined icon itself */
+  padding: 0 !important; /* Override AntD button padding */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header-plus-icon-btn:hover {
+  background-color: #1a2531 !important; /* Slightly lighter on hover */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.header-plus-icon-btn .anticon {
+  line-height: 1; /* Helps with vertical centering of icon in some cases */
+}
+
+.header-search-icon {
+  margin-right: 8px;
+  color: #495057;
+  font-size: 16px;
+}
+
+.header-search-input {
+  border: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  padding-left: 0;
+  color: #212529;
+}
+
+.header-search-input::placeholder {
+  color: #6c757d;
+}
+
+.header-actions-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.main-header .settings-icon { /* Scoped to main-header if defined directly in TSX */
+  font-size:16px;
+  cursor: pointer;
+  padding-right: 20px;
+  color: black; /* Match header text color */
+}
 
 .header-title {
   font-size: 20px;
@@ -27,13 +101,23 @@
 }
 
 .sider-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #fff;
-  text-align: center;
-  padding: 22px 16px;
+  display: flex; /* Use flexbox for alignment */
+  align-items: center; /* Vertically align icon and text */
+  justify-content: center; /* Horizontally center the content (icon + text) */
+  font-size: 18px; /* Adjusted for potentially less space with icon */
+  font-weight: 600; 
+  color: #fff; 
+  padding: 18px 10px; /* Adjusted padding */
   letter-spacing: 0.5px;
-  background: #001529;
+  background: #001529; 
+  height: 70px; /* Ensure it has a fixed height if menu calc depends on it */
+  box-sizing: border-box;
+}
+
+.sider-title-icon {
+  width: 24px; /* Adjust size as needed */
+  height: 24px; /* Adjust size as needed */
+  margin-right: 8px; /* Space between icon and text */
 }
 
 .main-sider {
@@ -58,7 +142,8 @@
   margin: 0;
   min-height: 280px;
   box-shadow: 0 4px 32px rgba(0,0,0,0.25);
-  color: #fff;
+  background-color: #f7f8fc;
+  color: black;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
