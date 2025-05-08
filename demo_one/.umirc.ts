@@ -32,6 +32,18 @@ export default defineConfig({
           path: "/create-subspace",
           component: "@/pages/create-subspace",
         },
+        {
+          path: "/causalitygraph",
+          component: "@/pages/causality_graph",
+        },
+        {
+          path: "/model",
+          component: "@/pages/model/welcome",
+        },
+        {
+          path:"/model/create",
+          component: "@/pages/model/create",
+        }
       ],
     },
   ],
