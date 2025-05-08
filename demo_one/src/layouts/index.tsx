@@ -46,7 +46,10 @@ export default function CustomLayout() {
                 <Link to="/alignment">Alignment</Link>
               </Menu.Item>
               <Menu.Item key="4" icon={<DeploymentUnitOutlined />}>
-                <Link to="/modelgraph">ModelGraph</Link>
+                <Link to="/causalitygraph">CausalityGraph</Link>
+              </Menu.Item>
+              <Menu.Item key="5" icon={<DeploymentUnitOutlined />}>
+                <Link to="/model">Model</Link>
               </Menu.Item>
             </Menu>
           </Sider>

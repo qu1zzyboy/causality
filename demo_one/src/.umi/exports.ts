@@ -10,7 +10,11 @@ export type { RuntimeConfig } from './core/defineApp'
 export { createBrowserHistory, createHashHistory, createMemoryHistory, Helmet, HelmetProvider, createSearchParams, generatePath, matchPath, matchRoutes, Navigate, NavLink, Outlet, resolvePath, useLocation, useMatch, useNavigate, useOutlet, useOutletContext, useParams, useResolvedPath, useRoutes, useSearchParams, useAppData, useClientLoaderData, useLoaderData, useRouteProps, useSelectedRoutes, useServerLoaderData, renderClient, __getRoot, Link, useRouteData, __useFetcher, withRouter } from '/home/litterpigger/hetu/causality/demo_one/node_modules/.pnpm/@umijs+renderer-react@4.4.6_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@umijs/renderer-react';
 export type { History, ClientLoader } from '/home/litterpigger/hetu/causality/demo_one/node_modules/.pnpm/@umijs+renderer-react@4.4.6_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@umijs/renderer-react'
 // umi/client/client/plugin
+<<<<<<< HEAD
 export { ApplyPluginsType, PluginManager } from '/home/litterpigger/hetu/causality/demo_one/node_modules/.pnpm/umi@4.4.6_@babel+core@7.26.10_@types+node@18.19.86_@types+react@19.1.2_eslint@8.35.0_je_d5ba816af4fb915a0d1daf2bfd286adc/node_modules/umi/client/client/plugin.js';
+=======
+export { ApplyPluginsType, PluginManager } from '/home/litterpigger/hetu/causality/demo_one/node_modules/.pnpm/umi@4.4.6_@babel+core@7.26.10_@types+node@18.19.86_@types+react@19.1.2_eslint@8.35.0_jest@29._w6n2rqdy4tltvghjica5ndszeu/node_modules/umi/client/client/plugin.js';
+>>>>>>> a7b494b981a9bae89bb463336e9fec0471fa50c8
 export { history, createHistory } from './core/history';
 export { terminal } from './core/terminal';
 // react ssr
