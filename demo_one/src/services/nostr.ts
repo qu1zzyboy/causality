@@ -169,29 +169,43 @@ export class NostrService {
         console.log('Successfully published post event:', result);
         return signedPostEvent;
     }
-    // Vote in subspace
-    async publishVote(params: {
-        subspaceID: string;
-        targetId: string;
-        vote: string;
-        content: string;
-    }): Promise<NostrEvent> {
-        if (!this.relay) {
-            throw new Error('Not connected to relay');
-        }
-        if (!this.secretKey) {
-            throw new Error('No secret key available');
-        }
 
+    // Create a new vote event structure
+    async createVote(params: {
+        subspaceID: string;
+        targetId: string; // ID of the proposal being voted on
+        vote: string;     // e.g., "yes", "no", "abstain"
+        content: string;  // Reason for the vote / comment
+    }): Promise<any> { // Return type should be the raw event structure type from your library
+        // No relay check needed here as we are just creating the event structure
         const voteEvent = await newVoteEvent(params.subspaceID, params.content);
         if (!voteEvent) {
-            throw new Error('Failed to create vote event');
+            throw new Error('Failed to create vote event structure');
+        }
+        voteEvent.setVote(params.targetId, params.vote);
+        // console.log('Created raw vote event:', JSON.stringify(voteEvent, null, 2));
+        return voteEvent; // Return the raw event
+    }
+
+    // Publish a pre-structured and externally signed vote event
+    async publishVote(rawVoteEvent: any, pubkey: string, signature: string): Promise<NostrEvent> {
+        // console.log('publishVote - rawVoteEvent:', JSON.stringify(rawVoteEvent, null, 2));
+        // console.log('publishVote - pubkey:', pubkey);
+
+        const eventToFinalize = toNostrEventGov(rawVoteEvent);
+        // Ensure pubkey and signature don't have '0x' prefix for finalizeEventBySig
+        const nostrPubkey = pubkey.startsWith('0x') ? pubkey.slice(2) : pubkey;
+        const nostrSignature = signature.startsWith('0x') ? signature.slice(2) : signature;
+
+        const signedVoteEvent = finalizeEventBySig(eventToFinalize, nostrPubkey, nostrSignature) as NostrEvent;
+        console.log('publishVote - signedVoteEvent:', JSON.stringify(signedVoteEvent, null, 2));
+
+        if (!this.relay) {
+            throw new Error('Not connected to relay for publishing vote');
         }
 
-        voteEvent.setVote(params.targetId, params.vote);
-
-        const signedVoteEvent = finalizeEvent(toNostrEventGov(voteEvent), this.secretKey) as NostrEvent;
-        await this.relay.publish(signedVoteEvent);
+        const result = await this.relay.publish(signedVoteEvent);
+        // console.log('Successfully published signed vote event:', result);
         return signedVoteEvent;
     }
 

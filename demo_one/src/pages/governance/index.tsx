@@ -44,6 +44,7 @@ interface Voter {
   vote: 'for' | 'against';
   timestamp: string;
   votingPower: number;
+  content?: string;
 }
 
 const Governance = () => {
@@ -66,6 +67,13 @@ const Governance = () => {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [proposalComments, setProposalComments] = useState<Comment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false);
+
+  // State for Voting
+  const [isSubmittingVote, setIsSubmittingVote] = useState(false);
+  // State to hold fetched vote counts for the selected proposal's detailed view
+  const [detailedVoteCounts, setDetailedVoteCounts] = useState<{ for: number; against: number } | null>(null);
+  // State to hold fetched voter details for the drawer
+  const [detailedVoters, setDetailedVoters] = useState<Voter[]>([]);
 
   const { signMessage, user, login, authenticated } = usePrivy();
   const [mpcPublicKey, setMpcPublicKey] = useState<string | null>(null);
@@ -205,14 +213,81 @@ const Governance = () => {
     }
   };
 
-  // Effect to fetch comments when selectedProposal changes
+  // Function to fetch and count votes for a given proposalId
+  const fetchProposalVotes = async (proposalId: string, currentSubspaceId: string) => {
+    if (!currentSubspaceId) return { counts: { for: 0, against: 0 }, voters: [] };
+    // console.log(`Fetching votes for proposal: ${proposalId} in subspace: ${currentSubspaceId}`);
+    try {
+      const voteEvents: NostrEvent[] = await eventAPIService.queryEvents({
+        kinds: [30302], // Kind for vote events
+        sid: [currentSubspaceId],
+        "#proposal_id": [proposalId], // Query for votes targeting this proposal_id
+      });
+      // console.log('Fetched raw vote events:', voteEvents);
+
+      let forVotes = 0;
+      let againstVotes = 0;
+      const votersList: Voter[] = [];
+
+      voteEvents.forEach(event => {
+        const voteTag = event.tags.find(tag => tag[0] === 'vote');
+        let voteChoice: 'for' | 'against' | null = null;
+
+        if (voteTag && voteTag.length > 1) {
+          if (voteTag[1].toLowerCase() === 'yes') {
+            forVotes++;
+            voteChoice = 'for';
+          } else if (voteTag[1].toLowerCase() === 'no') {
+            againstVotes++;
+            voteChoice = 'against';
+          }
+          // TODO: Handle 'abstain' or other vote types if necessary
+        }
+
+        if (voteChoice) { // Only add to voters list if a valid vote choice was found
+          votersList.push({
+            id: event.id,
+            name: event.pubkey, // Using pubkey as name for now
+            vote: voteChoice,
+            timestamp: new Date(event.created_at * 1000).toLocaleString(),
+            votingPower: 1, // Placeholder voting power
+            content: event.content || '' // Add the vote content
+          });
+        }
+      });
+      
+      // Sort voters by timestamp, newest first
+      votersList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      // console.log(`Votes for ${proposalId}: For - ${forVotes}, Against - ${againstVotes}`);
+      // console.log('Processed voters list:', votersList);
+      return { counts: { for: forVotes, against: againstVotes }, voters: votersList };
+    } catch (error) {
+      console.error('Failed to fetch proposal votes:', error);
+      message.error('Failed to load votes for the proposal.');
+      return { counts: { for: 0, against: 0 }, voters: [] }; // Return default on error
+    }
+  };
+
+  // Effect to fetch comments and votes when selectedProposal changes
   useEffect(() => {
-    if (selectedProposal) {
+    if (selectedProposal && subspaceId) {
       fetchCommentsForProposal(selectedProposal.id);
+      // Fetch votes and update the detailedVoteCounts state
+      const getVotesAndVoters = async () => {
+        // setIsLoadingProposals(true); // Consider a specific isLoadingVotes state if needed
+        const result = await fetchProposalVotes(selectedProposal.id, subspaceId);
+        setDetailedVoteCounts(result.counts);
+        setDetailedVoters(result.voters);
+        // setIsLoadingProposals(false);
+      };
+      getVotesAndVoters();
     } else {
       setProposalComments([]); // Clear comments if no proposal is selected
+      setDetailedVoteCounts(null); // Clear detailed votes
+      setDetailedVoters([]); // Clear detailed voters
     }
-  }, [selectedProposal, subspaceId]); // Also depends on subspaceId in case it changes while a proposal is selected
+  }, [selectedProposal, subspaceId]);
 
   const handleProposalClick = (proposal: Proposal) => {
     setSelectedProposal(proposal);
@@ -473,12 +548,94 @@ const Governance = () => {
     }
   };
 
-  const totalVotes = selectedProposal ? 
-    selectedProposal.votes.for + selectedProposal.votes.against : 0;
+  // Handler for submitting a vote
+  const handleVoteSubmit = async (voteChoice: 'yes' | 'no' | 'abstain') => {
+    if (!authenticated) {
+      message.info('Please log in to vote.');
+      login();
+      return;
+    }
+    if (!mpcPublicKey) {
+      message.error('MPC Public Key is not available. Please ensure your wallet is connected.');
+      return;
+    }
+    if (!subspaceId) {
+      message.error('Subspace ID is missing. Cannot submit vote.');
+      return;
+    }
+    if (!selectedProposal) {
+      message.error('No proposal selected to vote on.');
+      return;
+    }
+
+    setIsSubmittingVote(true);
+    try {
+      // console.log(`Submitting vote: ${voteChoice} for proposal: ${selectedProposal.id}`);
+
+      // 1. Create vote event structure
+      const rawVoteEvent = await nostrService.createVote({
+        subspaceID: subspaceId,
+        targetId: selectedProposal.id,
+        vote: voteChoice,
+        content: '' // Empty content as requested
+      });
+      // console.log('Raw vote event:', JSON.stringify(rawVoteEvent, null, 2));
+
+      // 2. Prepare event for signing
+      const eventForSigning = toNostrEventGov(rawVoteEvent);
+      eventForSigning.pubkey = mpcPublicKey.slice(2);
+      // console.log('Vote event for signing:', JSON.stringify(eventForSigning, null, 2));
+
+      const messageToSign = serializeEvent(eventForSigning);
+      // console.log('Message to sign for vote:', messageToSign);
+
+      // 3. Request user signature
+      const signature = await signMessage(messageToSign);
+      if (!signature) {
+        throw new Error('Failed to get signature from user for vote.');
+      }
+      // console.log('Signature for vote received:', signature);
+
+      // 4. Publish vote
+      await nostrService.publishVote(
+        rawVoteEvent,
+        mpcPublicKey.slice(2),
+        signature.slice(2)
+      );
+
+      message.success(`Successfully voted '${voteChoice}'!`)
+      // TODO: Refresh proposal data to update vote counts or optimistically update UI.
+      // For now, a simple console log or perhaps re-fetch proposals might be needed.
+      // fetchProposalsForTimeline(); // This would refetch all proposals
+      // Or, more targeted, fetch and update just the selectedProposal's vote counts if possible.
+      if (selectedProposal && subspaceId) {
+        fetchProposalVotes(selectedProposal.id, subspaceId).then(result => {
+          setDetailedVoteCounts(result.counts);
+          setDetailedVoters(result.voters);
+        });
+      }
+
+    } catch (error: any) {
+      console.error('Failed to submit vote:', error);
+      message.error(`Failed to submit vote: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSubmittingVote(false);
+    }
+  };
+
+  const totalVotes = selectedProposal && detailedVoteCounts ? 
+    detailedVoteCounts.for + detailedVoteCounts.against : 
+    (selectedProposal ? selectedProposal.votes.for + selectedProposal.votes.against : 0);
+  
   const forPercentage = totalVotes ? 
-    Math.round((selectedProposal?.votes.for || 0) / totalVotes * 100) : 0;
+    Math.round(((detailedVoteCounts?.for ?? selectedProposal?.votes.for ?? 0) / totalVotes) * 100) : 0;
+  
   const againstPercentage = totalVotes ? 
-    Math.round((selectedProposal?.votes.against || 0) / totalVotes * 100) : 0;
+    Math.round(((detailedVoteCounts?.against ?? selectedProposal?.votes.against ?? 0) / totalVotes) * 100) : 0;
+
+  const displayForVotes = detailedVoteCounts?.for ?? selectedProposal?.votes.for ?? 0;
+  const displayAgainstVotes = detailedVoteCounts?.against ?? selectedProposal?.votes.against ?? 0;
+
   return (
     <div className="p-6">
       <div className="flex gap-6">
@@ -542,20 +699,61 @@ const Governance = () => {
                 </Space>
                 <Paragraph>{selectedProposal.content}</Paragraph>
                 
-                {/* Voting statistics */}
-                <div className="flex gap-8 my-6">
-                  <div>
-                    <Text type="success">For: {selectedProposal.votes.for}</Text>
+                {/* Voting statistics - Integrated into main card */}
+                <div style={{ marginTop: 24, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <Title level={5} style={{ margin: 0 }}>Voting Status</Title>
+                    <Button type="link" onClick={() => setDrawerVisible(true)}>
+                      View Voting Details
+                    </Button>
                   </div>
+
+                  {/* Single combined progress bar */}
+                  <Progress 
+                    percent={100} // Full bar
+                    success={{ percent: forPercentage, strokeColor: '#52c41a' }} // Green for 'For' votes
+                    strokeColor="#ff4d4f" // Red for 'Against' votes (the remainder)
+                    format={() => ''} // Hide default percentage text on the bar
+                    style={{ marginBottom: 8 }}
+                  />
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text type="success">For: {displayForVotes} ({forPercentage}%)</Text>
+                    <Text type="danger">Against: {displayAgainstVotes} ({againstPercentage}%)</Text>
+                  </div>
+                  
                   <div>
-                    <Text type="danger">Against: {selectedProposal.votes.against}</Text>
+                    <Text strong>Total Votes: {totalVotes}</Text>
                   </div>
                 </div>
 
                 {/* Voting buttons */}
                 <Space className="mb-6">
-                  <Button type="primary">Vote For</Button>
-                  <Button danger>Vote Against</Button>
+                  <Button 
+                    type="primary"
+                    onClick={() => handleVoteSubmit('yes')}
+                    loading={isSubmittingVote}
+                    disabled={isSubmittingVote} // Disable while submitting
+                  >
+                    Vote For
+                  </Button>
+                  <Button 
+                    danger 
+                    onClick={() => handleVoteSubmit('no')}
+                    loading={isSubmittingVote}
+                    disabled={isSubmittingVote} // Disable while submitting
+                  >
+                    Vote Against
+                  </Button>
+                  {/* Optional: Abstain button 
+                  <Button 
+                    onClick={() => handleVoteSubmit('abstain')}
+                    loading={isSubmittingVote}
+                    disabled={isSubmittingVote}
+                  >
+                    Abstain
+                  </Button>
+                  */}
                 </Space>
 
                 {/* Comments section */}
@@ -611,37 +809,6 @@ const Governance = () => {
             </Card>
           )}
         </div>
-
-        {/* Right voting details panel */}
-        {selectedProposal && (
-          <div className="w-80 flex-shrink-0">
-            <Card 
-              title="Voting Details" 
-              className="h-full"
-              extra={
-                <Button 
-                  type="text" 
-                  icon={<RightOutlined />} 
-                  onClick={() => setDrawerVisible(true)}
-                />
-              }
-            >
-              <div className="space-y-4">
-                <div>
-                  <Text strong>Total Votes: {totalVotes}</Text>
-                </div>
-                <div>
-                  <Text type="success">For ({forPercentage}%)</Text>
-                  <Progress percent={forPercentage} status="active" strokeColor="#52c41a" />
-                </div>
-                <div>
-                  <Text type="danger">Against ({againstPercentage}%)</Text>
-                  <Progress percent={againstPercentage} status="active" strokeColor="#ff4d4f" />
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
       </div>
 
       {/* Voting details drawer */}
@@ -657,7 +824,7 @@ const Governance = () => {
             <div>
               <Title level={4}>Voters</Title>
               <List
-                dataSource={selectedProposal.voters}
+                dataSource={detailedVoters}
                 renderItem={voter => (
                   <List.Item>
                     <List.Item.Meta
@@ -671,9 +838,9 @@ const Governance = () => {
                         </Space>
                       }
                       description={
-                        <Space direction="vertical" size={0}>
-                          <Text type="secondary">{voter.timestamp}</Text>
-                          <Text>Voting Power: {voter.votingPower}</Text>
+                        <Space direction="vertical" size={2}>
+                          <Text type="secondary" style={{ fontSize: '12px' }}>{voter.timestamp}</Text>
+                          {voter.content && <Paragraph style={{ marginTop: 4, fontSize: '13px' }}>{voter.content}</Paragraph>}
                         </Space>
                       }
                     />
