@@ -57,6 +57,14 @@ const Governance = () => {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [isLoadingProposals, setIsLoadingProposals] = useState<boolean>(false);
 
+  // State for Create Post Modal
+  const [isCreatePostModalVisible, setIsCreatePostModalVisible] = useState(false);
+  const [createPostForm] = Form.useForm();
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+
+  // State for Comment Submission
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
   const { signMessage, user, login, authenticated } = usePrivy();
   const [mpcPublicKey, setMpcPublicKey] = useState<string | null>(null);
 
@@ -165,12 +173,74 @@ const Governance = () => {
     setSelectedProposal(proposal);
   };
 
-  const handleCommentSubmit = () => {
-    if (!newComment.trim()) return;
-    
-    // TODO: Handle comment submission, potentially with Nostr
-    console.log('New comment:', newComment);
-    setNewComment('');
+  const handleCommentSubmit = async () => {
+    if (!newComment.trim()) {
+      message.error('Comment cannot be empty.');
+      return;
+    }
+    if (!authenticated) {
+      message.info('Please log in to comment.');
+      login();
+      return;
+    }
+    if (!mpcPublicKey) {
+      message.error('MPC Public Key is not available. Please ensure your wallet is connected.');
+      return;
+    }
+    if (!subspaceId) {
+      message.error('Subspace ID is missing. Cannot submit comment.');
+      return;
+    }
+    if (!selectedProposal) {
+      message.error('No proposal selected to comment on.');
+      return;
+    }
+
+    setIsSubmittingComment(true);
+    try {
+      const commentContent = newComment.trim();
+      const parentId = selectedProposal.id; // Use proposal id as parentHash for the comment
+      const contentType = 'text'; // Test value, or make this 'markdown' if comments support it
+      console.log('parentId', parentId);
+      // 1. Create post event structure for the comment
+      const rawCommentEvent = await nostrService.createPost({
+        subspaceID: subspaceId,
+        content: commentContent,
+        parentHash: parentId,
+        contentType: contentType,
+      });
+
+      // 2. Prepare event for signing
+      const eventForSigning = toNostrEventGov(rawCommentEvent);
+      eventForSigning.pubkey = mpcPublicKey.slice(2);
+
+      const messageToSign = serializeEvent(eventForSigning);
+
+      // 3. Request user signature
+      const signature = await signMessage(messageToSign);
+      if (!signature) {
+        throw new Error('Failed to get signature from user for comment.');
+      }
+
+      // 4. Publish comment using nostrService.publishPost
+      await nostrService.publishPost(
+        rawCommentEvent,
+        mpcPublicKey.slice(2),
+        signature.slice(2)
+      );
+
+      message.success('Comment posted successfully!');
+      setNewComment(''); // Clear comment input
+      // TODO: Refresh comments for the selectedProposal or update local state
+      // For example, optimistic update or re-fetch:
+      // fetchCommentsForProposal(selectedProposal.id);
+
+    } catch (error: any) {
+      console.error('Failed to submit comment:', error);
+      message.error(`Failed to submit comment: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   const handleCreateProposalOpen = () => {
@@ -266,6 +336,95 @@ const Governance = () => {
     }
   };
 
+  // Handlers for Create Post Modal
+  const handleCreatePostOpen = () => {
+    if (!authenticated) {
+      message.info('Please log in to create a post.');
+      login(); // Prompt Privy login
+      return;
+    }
+    if (!mpcPublicKey) {
+      message.info('No wallet found. Please ensure your wallet is connected and accessible via Privy.');
+      return;
+    }
+    if (!subspaceId) {
+      message.error('Subspace ID is missing. Cannot create a post.');
+      return;
+    }
+    setIsCreatePostModalVisible(true);
+  };
+
+  const handleCreatePostCancel = () => {
+    setIsCreatePostModalVisible(false);
+    createPostForm.resetFields();
+  };
+
+  const handleCreatePostSubmit = async () => {
+    if (!subspaceId) {
+      message.error('Subspace ID is missing. Cannot submit post.');
+      return;
+    }
+    if (!mpcPublicKey) {
+      message.error('MPC Public Key is not available. Please ensure your wallet is connected.');
+      return;
+    }
+
+    try {
+      const values = await createPostForm.validateFields();
+      setIsSubmittingPost(true);
+
+      const postContentString = values.content; // Content is already a string from TextArea
+
+      // 1. Create post event structure using nostrService.createPost
+      // console.log('1. Creating Nostr post event structure...');
+      const rawPostEvent = await nostrService.createPost({
+        subspaceID: subspaceId,
+        content: postContentString,
+        contentType: 'markdown', // Defaulting to markdown as per nostr.ts example
+        parentHash: '', // Explicitly adding parentHash for root posts
+      });
+      // console.log('2. Raw Post Event created:', JSON.stringify(rawPostEvent, null, 2));
+
+      // 2. Prepare event for signing (similar to proposal flow)
+      // console.log('3. Preparing post event for signing...');
+      const eventForSigning = toNostrEventGov(rawPostEvent); // Using toNostrEventGov as it handles events from the same CIP library
+      eventForSigning.pubkey = mpcPublicKey.slice(2); // Use Nostr compatible pubkey (no 0x)
+      // nostr-tools' finalizeEventBySig usually sets created_at, but ensure it if needed before serializeEvent
+
+      const messageToSign = serializeEvent(eventForSigning);
+      // console.log('4. Post message to sign:', messageToSign);
+      // console.log('   Post event for signing structure:', JSON.stringify(eventForSigning, null, 2));
+
+      // 3. Request user signature via Privy
+      // console.log('5. Requesting signature for post via Privy...');
+      const signature = await signMessage(messageToSign);
+      // console.log('6. Signature for post received:', signature);
+
+      if (!signature) {
+        throw new Error('Failed to get signature from user for post.');
+      }
+
+      // 4. Publish post using the new nostrService.publishSignedPost method
+      // console.log('7. Publishing post via nostrService.publishSignedPost...');
+      await nostrService.publishPost(
+        rawPostEvent,          // Pass the original event structure from createPost
+        mpcPublicKey.slice(2), // Nostr compatible pubkey (no 0x)
+        signature.slice(2)     // Nostr compatible signature (no 0x)
+      );
+      
+      message.success('Post submitted successfully!');
+      setIsCreatePostModalVisible(false);
+      createPostForm.resetFields();
+      // TODO: Optionally, refresh posts list here if you are displaying posts on this page
+      
+    } catch (error: any) {
+      console.error('Failed to create post:', error);
+      message.error(`Failed to create post: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  };
+
   const totalVotes = selectedProposal ? 
     selectedProposal.votes.for + selectedProposal.votes.against : 0;
   const forPercentage = totalVotes ? 
@@ -281,11 +440,21 @@ const Governance = () => {
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 Proposals Timeline
-                <Button 
-                  icon={<PlusOutlined />} 
-                  onClick={handleCreateProposalOpen} 
-                  type="text" 
-                />
+                <div>
+                  <Button 
+                    icon={<PlusOutlined />} 
+                    onClick={handleCreateProposalOpen} 
+                    type="text" 
+                    title="Create Proposal"
+                  />
+                  <Button 
+                    icon={<MessageOutlined />} 
+                    onClick={handleCreatePostOpen} 
+                    type="text" 
+                    title="Create Post"
+                    style={{ marginLeft: 8 }}
+                  />
+                </div>
               </div>
             } 
             className="h-full"
@@ -364,7 +533,6 @@ const Governance = () => {
                     )}
                   />
 
-                  {/* Comment input */}
                   <div className="mt-4">
                     <TextArea
                       value={newComment}
@@ -377,6 +545,7 @@ const Governance = () => {
                       type="primary" 
                       icon={<SendOutlined />}
                       onClick={handleCommentSubmit}
+                      loading={isSubmittingComment}
                     >
                       Post Comment
                     </Button>
@@ -491,6 +660,27 @@ const Governance = () => {
             rules={[{ required: true, message: 'Please describe your proposal!' }]}
           >
             <TextArea rows={4} placeholder="Explain your proposal in detail" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Create Post Modal */}
+      <Modal
+        title="Create New Post"
+        open={isCreatePostModalVisible}
+        onOk={handleCreatePostSubmit}
+        onCancel={handleCreatePostCancel}
+        okText="Submit Post"
+        cancelText="Cancel"
+        confirmLoading={isSubmittingPost}
+      >
+        <Form form={createPostForm} layout="vertical" name="create_post_form">
+          <Form.Item
+            name="content"
+            label="Post Content"
+            rules={[{ required: true, message: 'Please write something for your post!' }]}
+          >
+            <TextArea rows={4} placeholder="What's on your mind?" />
           </Form.Item>
         </Form>
       </Modal>

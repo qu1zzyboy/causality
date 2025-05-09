@@ -8,7 +8,7 @@ import {
   toNostrEvent,
 } from '../../node_modules/@ai-chen2050/nostr-tools/lib/esm/cip/subspace.js'
 import {KindSubspaceCreate} from '../../node_modules/@ai-chen2050/nostr-tools/lib/esm/cip/constants.js'
-import {newPostEvent, newVoteEvent, newProposeEvent, newInviteEvent, toNostrEvent as toNostrEventGov} from '../../node_modules/@ai-chen2050/nostr-tools/lib/esm/cip/cip01/governance.js'
+import {newPostEvent, newVoteEvent, newProposeEvent, newInviteEvent, toNostrEvent as toNostrEventGov,setProposal} from '../../node_modules/@ai-chen2050/nostr-tools/lib/esm/cip/cip01/governance.js'
 import { ethers } from 'ethers';
 
 interface NostrEvent {
@@ -146,33 +146,29 @@ export class NostrService {
         await this.relay.publish(signedJoinEvent);
         return signedJoinEvent;
     }
-
-    // Publish post in subspace
-    async publishPost(params: {
+    async createPost(params: {
         subspaceID: string;
-        contentType: string;
+        parentHash: string;
         content: string;
-   
-    }): Promise<NostrEvent> {
-        if (!this.relay) {
-            throw new Error('Not connected to relay');
-        }
-        if (!this.secretKey) {
-            throw new Error('No secret key available');
-        }
-
+        contentType: string;
+    }){
         const postEvent = await newPostEvent(params.subspaceID, params.content);
-        if (!postEvent) {
-            throw new Error('Failed to create post event');
-        }
-
+        postEvent.setParent(params.parentHash);
         postEvent.setContentType(params.contentType);
+        return postEvent;
+    }
+    async publishPost(rawPostEvent: any, address: string, sig: string): Promise<NostrEvent> {
 
-        const signedPostEvent = finalizeEvent(toNostrEventGov(postEvent), this.secretKey) as NostrEvent;
-        await this.relay.publish(signedPostEvent);
+        const eventToFinalize = toNostrEventGov(rawPostEvent);
+        const signedPostEvent = finalizeEventBySig(eventToFinalize, address, sig) as NostrEvent;
+
+        if (!this.relay) {
+            throw new Error('Not connected to relay for publishing post');
+        }
+        const result = await this.relay.publish(signedPostEvent);
+        console.log('Successfully published post event:', result);
         return signedPostEvent;
     }
-
     // Vote in subspace
     async publishVote(params: {
         subspaceID: string;
@@ -209,12 +205,14 @@ export class NostrService {
         }
 
         const proposeEvent = await newProposeEvent(params.subspaceID, params.content);
+        proposeEvent.setProposal('normal','normal_rule');
         if (!proposeEvent) {
             throw new Error('Failed to create propose event');
         }
 
         return proposeEvent;
     }
+
     async PublishPropose(proposeEvent: NostrEvent, address: string, sig: string): Promise<NostrEvent> {
         console.log('sig', sig);
         console.log('address', address);
@@ -229,6 +227,7 @@ export class NostrService {
         return signedProposeEvent; 
         
     }
+
     // Publish invite event in subspace
     async publishInvite(params: {
         subspaceID: string;
