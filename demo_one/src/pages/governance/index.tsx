@@ -272,7 +272,6 @@ const Governance = () => {
     Math.round((selectedProposal?.votes.for || 0) / totalVotes * 100) : 0;
   const againstPercentage = totalVotes ? 
     Math.round((selectedProposal?.votes.against || 0) / totalVotes * 100) : 0;
-
   return (
     <div className="p-6">
       <div className="flex gap-6">
