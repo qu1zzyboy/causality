@@ -29,44 +29,44 @@ const SubspaceCard: React.FC<SubspaceCardProps> = ({
 
   return (
     <Card className="subspace-card">
-      {/* Top section: horizontal layout */}
-      <div className="card-content">
-        {/* Left image */}
-        <div className="card-image">
-          <img
-            src={image}
-            alt={name}
-            className="image"
-          />
-        </div>
+      {/* Wrapper for overall card layout: main content on left, button on right */}
+      <div className="card-layout-wrapper">
+        {/* Main content area: Image + Info Block */}
+        <div className="card-main-content">
+          {/* Image */}
+          <div className="card-image">
+            <img
+              src={image}
+              alt={name}
+              className="image"
+            />
+          </div>
+          
+          {/* Info block: Title, Description, and Stats */}
+          <div className="card-info-block">
+            <h2 className="card-title">{name}</h2>
+            <p className="card-description">{description}</p>
+            {/* Statistics moved under description */}
+            <div className="card-stats">
+              <Statistic
+                title="Proposals"
+                value={proposals}
+              />
+              <Statistic
+                title="Posts"
+                value={posts}
+              />
+            </div>
+          </div>
+        </div> {/* End of card-main-content */}
         
-        {/* Middle text section */}
-        <div className="card-info">
-          <h2 className="card-title">{name}</h2>
-          <p className="card-description">{description}</p>
+        {/* Action area: Button on the far right */}
+        <div className="card-action-area">
+          <Button color = "default" variant="solid" size="large" onClick={handleEnterSubspace}>
+            Enter
+          </Button>
         </div>
-        
-        {/* Right statistics */}
-        <div className="card-stats">
-          <Statistic
-            title="Proposals"
-            value={proposals}
-            prefix={<FileTextOutlined />}
-          />
-          <Statistic
-            title="Posts"
-            value={posts}
-            prefix={<MessageOutlined />}
-          />
-        </div>
-      </div>
-
-      {/* Bottom section: buttons */}
-      <div className="card-footer">
-        <Button type="primary" size="large" className="enter-button" onClick={handleEnterSubspace}>
-          Enter Subspace
-        </Button>
-      </div>
+      </div> {/* End of card-layout-wrapper */}
     </Card>
   );
 };
@@ -87,7 +87,7 @@ const Vote = () => {
         );
 
         // Process subspace data
-        const processedSubspaces = subspaceEvents.map(event => {
+        const processedSubspacesPromises = subspaceEvents.map(async (event) => {
           // Get subspace name from tags
           const nameTag = event.tags.find(tag => tag[0] === 'subspace_name');
           const name = nameTag ? nameTag[1] : 'Unnamed Subspace';
@@ -105,22 +105,36 @@ const Vote = () => {
           let imageUrl = '';
           try {
             const contentObj = JSON.parse(event.content);
-            imageUrl = contentObj.img_url || '/image.png';
+            imageUrl = contentObj.img_url || '/image.png'; // Default image
           } catch (e) {
-            imageUrl = '/image.png';
+            imageUrl = '/image.png'; // Default image
+          }
+
+          let proposalsCount = 0;
+          let postsCount = 0;
+
+          try {
+            // event.id is the sid for the subspace
+            const details = await eventAPIService.getSubspaceDetails(event.id);
+            proposalsCount = details.keys["30301"] || 0;
+            postsCount = details.keys["30300"] || 0;
+          } catch (detailError) {
+            console.error(`Failed to get details for subspace ${event.id}:`, detailError);
+            // Keep counts as 0 if details fetch fails
           }
 
           return {
-            id: event.id,
+            id: event.id, // This is the subspace_id (sid)
             name,
             description,
             image: imageUrl,
-            proposals: 0, // 这些数据需要另外统计
-            posts: 0,     // 这些数据需要另外统计
+            proposals: proposalsCount,
+            posts: postsCount,
           };
         });
 
-        setSubspaces(processedSubspaces);
+        const resolvedSubspaces = await Promise.all(processedSubspacesPromises);
+        setSubspaces(resolvedSubspaces);
       } catch (error) {
         console.error('Error fetching subspaces:', error);
         message.error('Failed to fetch subspaces');

@@ -1,4 +1,4 @@
-interface Event {
+export interface Event {
     id: string;
     pubkey: string;
     created_at: number;
@@ -6,6 +6,18 @@ interface Event {
     content: string;
     tags: string[][];
     sig: string;
+}
+
+export interface SubspaceDetails {
+    id: string;
+    doc_type: string;
+    subspace_id: string;
+    keys: {
+        [key: string]: number; // e.g., "30300": 2, "30301": 2
+    };
+    events: string[];
+    created: number;
+    updated: number;
 }
 
 export class EventAPIService {
@@ -191,6 +203,67 @@ export class EventAPIService {
                 throw new Error(`获取事件失败: ${error.message}`);
             }
             throw new Error('获取事件失败: 未知错误');
+        }
+    }
+
+    // Query events by flexible criteria
+    async queryEvents(criteria: Record<string, any>): Promise<Event[]> {
+        try {
+            // First check server status
+            const isServerHealthy = await this.checkServerStatus();
+            if (!isServerHealthy) {
+                throw new Error('服务器不可用');
+            }
+
+            console.log('Querying events with criteria:', criteria);
+            const response = await this.fetchWithRetry(`${this.baseURL}/events/query`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(criteria),
+            });
+
+            const data = await response.json();
+            console.log('Events queried successfully:', data);
+            return data;
+        } catch (error) {
+            console.error('Failed to query events:', error);
+            if (error instanceof Error) {
+                throw new Error(`查询事件失败: ${error.message}`);
+            }
+            throw new Error('查询事件失败: 未知错误');
+        }
+    }
+
+    // Get subspace details by SID
+    async getSubspaceDetails(sid: string): Promise<SubspaceDetails> {
+        try {
+            // Server status check might not be strictly necessary for a GET to a specific resource if not done for others
+            // but can be kept for consistency if desired.
+            // const isServerHealthy = await this.checkServerStatus();
+            // if (!isServerHealthy) {
+            //     throw new Error('服务器不可用');
+            // }
+
+            console.log('Fetching subspace details for sid:', sid);
+            // The endpoint is /api/subspaces/{sid}, not /api/events/subspaces/{sid}
+            const response = await this.fetchWithRetry(`${this.baseURL}/subspaces/${sid}`, {
+                method: 'GET',
+                headers: {
+                    // Accept header is already added by fetchWithRetry
+                },
+            });
+
+            const data = await response.json();
+            console.log('Subspace details fetched successfully:', data);
+            return data;
+        } catch (error) {
+            console.error(`Failed to fetch subspace details for sid ${sid}:`, error);
+            if (error instanceof Error) {
+                throw new Error(`获取空间详情失败 (${sid}): ${error.message}`);
+            }
+            throw new Error(`获取空间详情失败 (${sid}): 未知错误`);
         }
     }
 }

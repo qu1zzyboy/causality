@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from '@umijs/max';
-import { Card, Timeline, Typography, Button, Avatar, List, Input, Space, Drawer, Progress, Tag } from 'antd';
-import { FileTextOutlined, MessageOutlined, UserOutlined, SendOutlined, RightOutlined } from '@ant-design/icons';
+import { Card, Timeline, Typography, Button, Avatar, List, Input, Space, Drawer, Progress, Tag, Modal, Form, message } from 'antd';
+import { FileTextOutlined, MessageOutlined, UserOutlined, SendOutlined, RightOutlined, PlusOutlined } from '@ant-design/icons';
+
+import { nostrService } from '@/services/nostr';
+import { eventAPIService, Event as NostrEvent } from '@/services/eventAPI';
+import { usePrivy } from '@privy-io/react-auth';
+import { Relay } from '@ai-chen2050/nostr-tools';
+// Assuming these paths are correct relative to your project structure and how they are resolved
+// Note: Direct .js imports might lead to TS warnings if no .d.ts files are present
+import { toNostrEvent as toNostrEventGov } from '../../../node_modules/@ai-chen2050/nostr-tools/lib/esm/cip/cip01/governance.js';
+import { serializeEvent } from '../../../node_modules/@ai-chen2050/nostr-tools/lib/esm/pure.js';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -19,6 +28,7 @@ interface Proposal {
   };
   comments: Comment[];
   voters: Voter[];
+  originalCreatedAt?: number;
 }
 
 interface Comment {
@@ -41,60 +51,115 @@ const Governance = () => {
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
   const [newComment, setNewComment] = useState('');
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [isCreateProposalModalVisible, setIsCreateProposalModalVisible] = useState(false);
+  const [createProposalForm] = Form.useForm();
+  const [isSubmittingProposal, setIsSubmittingProposal] = useState(false);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [isLoadingProposals, setIsLoadingProposals] = useState<boolean>(false);
 
-  // Example data
-  const proposals: Proposal[] = [
-    {
-      id: '1',
-      title: 'Increase DAO Treasury Allocation',
-      content: 'Proposal to increase the DAO treasury allocation from 10% to 15% to support more community initiatives.',
-      author: 'Alice',
-      timestamp: '2024-03-15 10:00',
-      status: 'active',
-      votes: {
-        for: 120,
-        against: 45,
-      },
-      comments: [
-        {
-          id: '1',
-          author: 'Bob',
-          content: 'I support this proposal as it will help fund more community projects.',
-          timestamp: '2024-03-15 11:00',
-        },
-        {
-          id: '2',
-          author: 'Charlie',
-          content: 'I think we should consider the impact on token holders first.',
-          timestamp: '2024-03-15 12:00',
-        },
-      ],
-      voters: [
-        {
-          id: '1',
-          name: 'Alice',
-          vote: 'for',
-          timestamp: '2024-03-15 10:05',
-          votingPower: 100,
-        },
-        {
-          id: '2',
-          name: 'Bob',
-          vote: 'for',
-          timestamp: '2024-03-15 10:10',
-          votingPower: 50,
-        },
-        {
-          id: '3',
-          name: 'Charlie',
-          vote: 'against',
-          timestamp: '2024-03-15 10:15',
-          votingPower: 30,
-        },
-      ],
-    },
-    // Can add more proposals
-  ];
+  const { signMessage, user, login, authenticated } = usePrivy();
+  const [mpcPublicKey, setMpcPublicKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const connectRelay = async () => {
+      try {
+        // TODO: Consider moving relayURL to a config file
+        const relayURL = 'wss://events.teeml.ai';
+        // console.log('Connecting to relay for governance...');
+        const relayInstance = await Relay.connect(relayURL);
+        // console.log(`Connected to ${relayInstance.url} for governance`);
+        nostrService.setRelay(relayInstance);
+        console.log('Relay set successfully in nostrService for governance');
+      } catch (error) {
+        console.error('Failed to connect to relay for governance:', error);
+        message.error('Failed to connect to relay services. Proposal functionality may be limited.');
+      }
+    };
+    connectRelay();
+
+    // Cleanup function (optional, depends on nostrService behavior)
+    return () => {
+      // console.log('Disconnecting relay from governance page...');
+      // nostrService.disconnect(); // Be cautious if other components rely on this singleton connection
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authenticated && user) {
+      const embeddedWallet = user.linkedAccounts.findLast(account => account.type === 'wallet');
+      if (embeddedWallet) {
+        setMpcPublicKey(embeddedWallet.address);
+        // console.log('MPC Wallet Address for Governance:', embeddedWallet.address);
+      } else {
+        setMpcPublicKey(null);
+        // console.log('No MPC wallet found for the user.');
+      }
+    } else {
+      setMpcPublicKey(null);
+    }
+  }, [user, authenticated]);
+
+  useEffect(() => {
+    const fetchProposalsForTimeline = async () => {
+      if (!subspaceId) {
+        // console.log('Subspace ID not available, clearing proposals.');
+        setProposals([]);
+        return;
+      }
+      setIsLoadingProposals(true);
+      try {
+        // console.log(`Fetching proposals for subspace: ${subspaceId}, kind: 30301`);
+        const events: NostrEvent[] = await eventAPIService.queryEvents({
+          kinds: [30301],
+          sid: [subspaceId],
+        });
+        // console.log('Fetched raw events for timeline:', events);
+
+        const mappedProposals: Proposal[] = events
+          .map(event => {
+            let title = 'Untitled Proposal';
+            let description = '';
+            try {
+              if (event.content) {
+                const contentObj = JSON.parse(event.content);
+                title = contentObj.title || title;
+                description = contentObj.description || '';
+              }
+            } catch (e) {
+              console.error('Failed to parse event content for proposal:', event.content, e);
+            }
+            
+            const proposalIdTag = event.tags.find((tag: string[]) => tag.length > 1 && tag[0] === 'proposal_id');
+            const idToUse = proposalIdTag ? proposalIdTag[1] : event.id;
+
+            return {
+              id: idToUse,
+              title: title,
+              content: description, 
+              author: event.pubkey,
+              timestamp: new Date(event.created_at * 1000).toLocaleString(),
+              status: 'active' as 'active' | 'passed' | 'rejected', // Default status, API doesn't provide this for this query
+              votes: { for: 0, against: 0 }, // Default, not from this API
+              comments: [], // Default, not from this API
+              voters: [], // Default, not from this API
+              originalCreatedAt: event.created_at,
+            };
+          })
+          .sort((a, b) => (b.originalCreatedAt || 0) - (a.originalCreatedAt || 0)); // Sort descending
+
+        // console.log('Mapped and sorted proposals:', mappedProposals);
+        setProposals(mappedProposals.map(({ originalCreatedAt, ...rest }) => rest as Proposal));
+      } catch (error) {
+        console.error('Failed to fetch or process proposals:', error);
+        message.error('Failed to load proposals.');
+        setProposals([]);
+      } finally {
+        setIsLoadingProposals(false);
+      }
+    };
+
+    fetchProposalsForTimeline();
+  }, [subspaceId]);
 
   const handleProposalClick = (proposal: Proposal) => {
     setSelectedProposal(proposal);
@@ -103,9 +168,102 @@ const Governance = () => {
   const handleCommentSubmit = () => {
     if (!newComment.trim()) return;
     
-    // TODO: Handle comment submission
+    // TODO: Handle comment submission, potentially with Nostr
     console.log('New comment:', newComment);
     setNewComment('');
+  };
+
+  const handleCreateProposalOpen = () => {
+    if (!authenticated) {
+      message.info('Please log in to create a proposal.');
+      login(); // Prompt Privy login
+      return;
+    }
+    if (!mpcPublicKey) {
+      message.info('No wallet found. Please ensure your wallet is connected and accessible via Privy.');
+      // Optionally, provide guidance or rely on Privy's UI post-login for wallet setup.
+      return;
+    }
+    if (!subspaceId) {
+      message.error('Subspace ID is missing. Cannot create a proposal.');
+      return;
+    }
+    setIsCreateProposalModalVisible(true);
+  };
+
+  const handleCreateProposalCancel = () => {
+    setIsCreateProposalModalVisible(false);
+    createProposalForm.resetFields();
+  };
+
+  const handleCreateProposalSubmit = async () => {
+    if (!subspaceId) {
+      message.error('Subspace ID is missing. Cannot submit proposal.');
+      return;
+    }
+    if (!mpcPublicKey) {
+      message.error('MPC Public Key is not available. Please ensure your wallet is connected.');
+      return;
+    }
+
+    try {
+      const values = await createProposalForm.validateFields();
+      setIsSubmittingProposal(true);
+
+      const proposalDetails = {
+        title: values.title,
+        description: values.content 
+      };
+      const contentString = JSON.stringify(proposalDetails);
+
+      // 1. Create propose event structure
+      // console.log('1. Creating Nostr propose event structure...');
+      const rawProposeEvent = await nostrService.createPropose({
+        subspaceID: subspaceId,
+        content: contentString,
+      });
+      // console.log('2. Raw Propose Event created:', JSON.stringify(rawProposeEvent, null, 2));
+
+      // 2. Prepare event for signing
+      // console.log('3. Preparing event for signing...');
+      const eventForSigning = toNostrEventGov(rawProposeEvent);
+      eventForSigning.pubkey = mpcPublicKey.slice(2); // Use Nostr compatible pubkey (no 0x)
+      // nostr-tools' finalizeEventBySig usually sets created_at, but ensure it if needed before serializeEvent
+      // For now, assume serializeEvent and finalizeEventBySig handle it.
+      
+      const messageToSign = serializeEvent(eventForSigning);
+      // console.log('4. Message to sign:', messageToSign);
+      // console.log('   Event for signing structure:', JSON.stringify(eventForSigning, null, 2));
+
+
+      // 3. Request user signature via Privy
+      // console.log('5. Requesting signature via Privy...');
+      const signature = await signMessage(messageToSign);
+      // console.log('6. Signature received:', signature);
+
+      if (!signature) {
+        throw new Error('Failed to get signature from user.');
+      }
+
+      // 4. Publish proposal
+      // console.log('7. Publishing proposal via nostrService.PublishPropose...');
+      await nostrService.PublishPropose(
+        rawProposeEvent,      // Pass the original event structure from createPropose
+        mpcPublicKey.slice(2), // Nostr compatible pubkey
+        signature.slice(2)     // Nostr compatible signature (no 0x)
+      );
+      
+      message.success('Proposal submitted successfully!');
+      setIsCreateProposalModalVisible(false);
+      createProposalForm.resetFields();
+      // TODO: Optionally, refresh the proposals list here
+      
+    } catch (error: any) {
+      console.error('Failed to create proposal:', error);
+      message.error(`Failed to create proposal: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSubmittingProposal(false);
+    }
   };
 
   const totalVotes = selectedProposal ? 
@@ -120,8 +278,21 @@ const Governance = () => {
       <div className="flex gap-6">
         {/* Left timeline */}
         <div className="w-80 flex-shrink-0">
-          <Card title="Proposals Timeline" className="h-full">
+          <Card 
+            title={
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                Proposals Timeline
+                <Button 
+                  icon={<PlusOutlined />} 
+                  onClick={handleCreateProposalOpen} 
+                  type="text" 
+                />
+              </div>
+            } 
+            className="h-full"
+          >
             <Timeline
+              pending={isLoadingProposals ? "Loading proposals..." : undefined}
               items={proposals.map(proposal => ({
                 color: proposal.status === 'active' ? 'blue' : 
                        proposal.status === 'passed' ? 'green' : 'red',
@@ -296,6 +467,34 @@ const Governance = () => {
           </div>
         )}
       </Drawer>
+
+      {/* Create Proposal Modal */}
+      <Modal
+        title="Create New Proposal"
+        open={isCreateProposalModalVisible}
+        onOk={handleCreateProposalSubmit}
+        onCancel={handleCreateProposalCancel}
+        okText="Submit Proposal"
+        cancelText="Cancel"
+        confirmLoading={isSubmittingProposal}
+      >
+        <Form form={createProposalForm} layout="vertical" name="create_proposal_form">
+          <Form.Item
+            name="title"
+            label="Proposal Title"
+            rules={[{ required: true, message: 'Please input the title of your proposal!' }]}
+          >
+            <Input placeholder="Enter proposal title" />
+          </Form.Item>
+          <Form.Item
+            name="content"
+            label="Proposal Description"
+            rules={[{ required: true, message: 'Please describe your proposal!' }]}
+          >
+            <TextArea rows={4} placeholder="Explain your proposal in detail" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

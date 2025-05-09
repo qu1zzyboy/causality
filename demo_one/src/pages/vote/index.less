@@ -53,10 +53,18 @@
   }
 }
 
-.card-content {
+// Card styles for the new structure
+.card-layout-wrapper {
   display: flex;
-  align-items: flex-start;
-  margin-bottom: 16px;
+  justify-content: space-between; // Positions main content and action area
+  align-items: stretch;      // Changed from flex-start to stretch for better vertical centering of action area
+  gap: @card-padding;             // Gap between main content and action area
+}
+
+.card-main-content {
+  display: flex;
+  flex-grow: 1;                 // Allows this section to take up available space
+  gap: @card-padding;             // Gap between image and info-block
 }
 
 .card-image {
@@ -72,9 +80,15 @@
   }
 }
 
+.card-info-block {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
 .card-info {
-  flex: 1;
-  margin: 0 16px;
+  // flex: 1; // This was for when it was a direct child of a flex row, might not be needed or adjusted
+  // margin: 0 16px; // Remove, spacing now handled by gaps in parent flex containers
 }
 
 .card-title {
@@ -93,15 +107,57 @@
 
 .card-stats {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  gap: 16px; // This will be the gap between "Proposals: X" and "Posts: Y"
+  margin-top: 12px;
+
+  .ant-statistic { // Style each individual statistic component
+    line-height: 1.2; // Adjust line height for better vertical alignment if needed
+    
+    .ant-statistic-title {
+      display: inline-block;
+      font-size: 14px; // Standard Ant Design title size
+      color: rgba(0, 0, 0, 0.65); // A slightly lighter color for the title
+      margin-right: 6px; // Space between the title and its value
+      vertical-align: baseline;
+    }
+
+    .ant-statistic-content {
+      display: inline-block;
+      font-size: 14px; // Match the title's font size
+      color: rgba(0, 0, 0, 0.88); // Standard Ant Design content color
+      vertical-align: baseline;
+
+      // If antd wraps value in another span, ensure it inherits
+      .ant-statistic-content-value {
+        font-size: inherit;
+        line-height: inherit;
+      }
+    }
+  }
+}
+
+.card-action-area { // Replaces .card-footer for positioning the button
+  display: flex;
+  align-items: center; // Vertically center the button. Use flex-start if top alignment is preferred.
+  justify-content: flex-end;
+  flex-shrink: 0;       // Prevent the button area from shrinking
+}
+
+.enter-button {
+  // width: 100%; // REMOVE this - button should size to its content or be styled explicitly
+}
+
+// Comment out or remove old selectors if they are fully replaced to avoid conflicts
+/*
+.card-content {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 16px;
 }
 
 .card-footer {
   display: flex;
   justify-content: center;
 }
-
-.enter-button {
-  width: 100%;
-} 
+*/ 
