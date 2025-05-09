@@ -64,6 +64,8 @@ const Governance = () => {
 
   // State for Comment Submission
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [proposalComments, setProposalComments] = useState<Comment[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false);
 
   const { signMessage, user, login, authenticated } = usePrivy();
   const [mpcPublicKey, setMpcPublicKey] = useState<string | null>(null);
@@ -168,6 +170,50 @@ const Governance = () => {
     fetchProposalsForTimeline();
   }, [subspaceId]);
 
+  // Function to fetch comments for a given proposalId
+  const fetchCommentsForProposal = async (proposalId: string) => {
+    if (!subspaceId) return;
+    setIsLoadingComments(true);
+    try {
+      // console.log(`Fetching comments for proposal: ${proposalId} in subspace: ${subspaceId}`);
+      const events: NostrEvent[] = await eventAPIService.queryEvents({
+        kinds: [30300], // Kind for posts/comments
+        sid: [subspaceId],
+        "#parent": [proposalId], // Query for posts whose parent is the proposalId
+      });
+      // console.log('Fetched raw comment events:', events);
+
+      const mappedComments: Comment[] = events
+        .map(event => ({
+          id: event.id,
+          author: event.pubkey,
+          content: event.content,
+          timestamp: new Date(event.created_at * 1000).toLocaleString(),
+          // Add originalCreatedAt for sorting if needed, then remove before setting state
+          // originalCreatedAt: event.created_at 
+        }))
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Sort newest first
+
+      // console.log('Mapped and sorted comments:', mappedComments);
+      setProposalComments(mappedComments);
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+      message.error('Failed to load comments for the proposal.');
+      setProposalComments([]); // Clear comments on error
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
+  // Effect to fetch comments when selectedProposal changes
+  useEffect(() => {
+    if (selectedProposal) {
+      fetchCommentsForProposal(selectedProposal.id);
+    } else {
+      setProposalComments([]); // Clear comments if no proposal is selected
+    }
+  }, [selectedProposal, subspaceId]); // Also depends on subspaceId in case it changes while a proposal is selected
+
   const handleProposalClick = (proposal: Proposal) => {
     setSelectedProposal(proposal);
   };
@@ -233,6 +279,9 @@ const Governance = () => {
       // TODO: Refresh comments for the selectedProposal or update local state
       // For example, optimistic update or re-fetch:
       // fetchCommentsForProposal(selectedProposal.id);
+      if (selectedProposal) { // Ensure selectedProposal is not null
+        fetchCommentsForProposal(selectedProposal.id); // Refresh comments after posting new one
+      }
 
     } catch (error: any) {
       console.error('Failed to submit comment:', error);
@@ -515,7 +564,8 @@ const Governance = () => {
                   <List
                     className="mb-6"
                     itemLayout="horizontal"
-                    dataSource={selectedProposal.comments}
+                    dataSource={proposalComments}
+                    loading={isLoadingComments}
                     renderItem={comment => (
                       <List.Item>
                         <List.Item.Meta
