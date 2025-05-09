@@ -137,8 +137,7 @@ const Governance = () => {
               console.error('Failed to parse event content for proposal:', event.content, e);
             }
             
-            const proposalIdTag = event.tags.find((tag: string[]) => tag.length > 1 && tag[0] === 'proposal_id');
-            const idToUse = proposalIdTag ? proposalIdTag[1] : event.id;
+            const idToUse = event.id; // Always use the event's own ID as the proposal ID
 
             return {
               id: idToUse,

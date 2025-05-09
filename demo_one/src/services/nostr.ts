@@ -161,7 +161,7 @@ export class NostrService {
 
         const eventToFinalize = toNostrEventGov(rawPostEvent);
         const signedPostEvent = finalizeEventBySig(eventToFinalize, address, sig) as NostrEvent;
-
+        console.log('signedPostEvent', signedPostEvent);
         if (!this.relay) {
             throw new Error('Not connected to relay for publishing post');
         }
