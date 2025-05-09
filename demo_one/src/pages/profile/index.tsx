@@ -103,12 +103,12 @@ const HomePage: React.FC = () => {
       {/* Subspaces Section */}
       <Card className={styles.subspacesCard}>
         <Title level={4}>Your Subspaces</Title>
-        <Row gutter={[16, 16]}>
+        <Row gutter={[16, 24]}>
           {userSubspaces.map((subspace) => (
-            <Col span={8} key={subspace.id}>
+            <Col xs={24} sm={12} md={12} lg={8} xl={8} key={subspace.id}>
               <Card
                 hoverable
-                cover={<img alt={subspace.name} src={subspace.image} />}
+                cover={<img alt={subspace.name} src={subspace.image} style={{ aspectRatio: '16/9', objectFit: 'cover' }} />}
               >
                 <Card.Meta
                   title={subspace.name}

@@ -32,7 +32,7 @@ export default function CustomLayout() {
       <Layout className="main-layout">
         <Sider width={200} className="main-sider">
           <div className="sider-title">
-            <span>Causality Graph</span>
+            <span>Hetu AI4Science</span>
           </div>
           <Menu
             mode="inline"
