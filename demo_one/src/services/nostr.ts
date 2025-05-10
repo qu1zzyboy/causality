@@ -246,29 +246,33 @@ export class NostrService {
         
     }
 
-    // Publish invite event in subspace
-    async publishInvite(params: {
+    // Create invite event
+    async createInvite(params: {
         subspaceID: string;
         inviteePubkey: string;
         rules?: string;
         content: string;
-    }): Promise<NostrEvent> {
-        if (!this.relay) {
-            throw new Error('Not connected to relay');
-        }
-        if (!this.secretKey) {
-            throw new Error('No secret key available');
-        }
-
+    }): Promise<any> {
         const inviteEvent = await newInviteEvent(params.subspaceID, params.content);
         if (!inviteEvent) {
             throw new Error('Failed to create invite event');
         }
 
         inviteEvent.setInvite(params.inviteePubkey, params.rules);
+        return inviteEvent;
+    }
 
-        const signedInviteEvent = finalizeEvent(toNostrEventGov(inviteEvent), this.secretKey) as NostrEvent;
-        await this.relay.publish(signedInviteEvent);
+    // Publish invite event
+    async publishInvite(rawInviteEvent: any, address: string, sig: string): Promise<NostrEvent> {
+        const eventToFinalize = toNostrEventGov(rawInviteEvent);
+        const signedInviteEvent = finalizeEventBySig(eventToFinalize, address, sig) as NostrEvent;
+        
+        if (!this.relay) {
+            throw new Error('Not connected to relay');
+        }
+        
+        const result = await this.relay.publish(signedInviteEvent);
+        console.log('Successfully published invite event:', result);
         return signedInviteEvent;
     }
 
