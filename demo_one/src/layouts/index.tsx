@@ -32,7 +32,7 @@ export default function CustomLayout() {
       <Layout className="main-layout">
         <Sider width={200} className="main-sider">
           <div className="sider-title">
-            <span>Hetu AI4Science</span>
+            <span>AI4Science</span>
           </div>
           <Menu
             mode="inline"
@@ -45,9 +45,6 @@ export default function CustomLayout() {
             </Menu.Item>
             <Menu.Item key="2" icon={<CheckSquareOutlined />}>
               <UmiLink to="/vote">DeGovernance</UmiLink>
-            </Menu.Item>
-            <Menu.Item key="4" icon={<DeploymentUnitOutlined />}>
-              <UmiLink to="/causalitygraph">CausalityGraph</UmiLink>
             </Menu.Item>
             <Menu.Item key="5" icon={<DeploymentUnitOutlined />}>
               <UmiLink to="/model">Model</UmiLink>
