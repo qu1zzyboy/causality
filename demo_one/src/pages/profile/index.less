@@ -6,16 +6,16 @@
 
 .profileCard {
   margin-bottom: 24px;
-  
-  .profileContent {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
+}
 
-  .userName {
-    margin: 0;
-  }
+.profileContent {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.userName {
+  margin: 0 !important;
 }
 
 .statsCard {
@@ -23,6 +23,8 @@
 }
 
 .subspacesCard {
+  margin-bottom: 24px;
+
   :global {
     .ant-card-cover {
       height: 200px;
@@ -33,6 +35,16 @@
         height: 100%;
         object-fit: cover;
       }
+    }
+  }
+}
+
+.inviteGraphCard {
+  margin-bottom: 24px;
+  
+  :global {
+    .ant-card-body {
+      padding: 24px;
     }
   }
 } 

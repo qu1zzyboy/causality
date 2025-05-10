@@ -20,6 +20,54 @@ export interface SubspaceDetails {
     updated: number;
 }
 
+export interface InvitedUser {
+    user_id: string;
+    subspace_id: string;
+    timestamp: number;
+}
+
+export interface UserInvites {
+    total_invited: number;
+    subspace_invited: {
+        [subspaceId: string]: number;
+    };
+    invited_users: {
+        [subspaceId: string]: InvitedUser[];
+    };
+}
+
+export interface SubspaceStats {
+    [kind: string]: number;
+}
+
+export interface VoteStats {
+    total_votes: number;
+    yes_votes: number;
+    no_votes: number;
+    subspace_votes: {
+        [subspaceId: string]: {
+            total_votes: number;
+            yes_votes: number;
+            no_votes: number;
+        };
+    };
+}
+
+export interface UserStats {
+    id: string;
+    doc_type: string;
+    total_stats: {
+        [kind: string]: number;
+    };
+    subspace_stats: {
+        [subspaceId: string]: SubspaceStats;
+    };
+    created_subspaces: string[];
+    joined_subspaces: string[];
+    vote_stats: VoteStats;
+    last_updated: number;
+}
+
 export class EventAPIService {
     private static instance: EventAPIService;
     private baseURL: string = 'https://events.teeml.ai/api';
@@ -264,6 +312,52 @@ export class EventAPIService {
                 throw new Error(`获取空间详情失败 (${sid}): ${error.message}`);
             }
             throw new Error(`获取空间详情失败 (${sid}): 未知错误`);
+        }
+    }
+
+    // Get user invites
+    async getUserInvites(userId: string): Promise<UserInvites> {
+        try {
+            console.log('Fetching user invites for:', userId);
+            const response = await this.fetchWithRetry(`${this.baseURL}/users/${userId}/invites`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+            console.log('User invites fetched successfully:', data);
+            return data;
+        } catch (error) {
+            console.error(`Failed to fetch user invites for ${userId}:`, error);
+            if (error instanceof Error) {
+                throw new Error(`获取用户邀请信息失败 (${userId}): ${error.message}`);
+            }
+            throw new Error(`获取用户邀请信息失败 (${userId}): 未知错误`);
+        }
+    }
+
+    // Get user stats
+    async getUserStats(userId: string): Promise<UserStats> {
+        try {
+            console.log('Fetching user stats for:', userId);
+            const response = await this.fetchWithRetry(`${this.baseURL}/users/${userId}/stats`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+            console.log('User stats fetched successfully:', data);
+            return data;
+        } catch (error) {
+            console.error(`Failed to fetch user stats for ${userId}:`, error);
+            if (error instanceof Error) {
+                throw new Error(`获取用户统计信息失败 (${userId}): ${error.message}`);
+            }
+            throw new Error(`获取用户统计信息失败 (${userId}): 未知错误`);
         }
     }
 }
