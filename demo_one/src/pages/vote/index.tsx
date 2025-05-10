@@ -3,6 +3,11 @@ import { Card, Button, Statistic, message } from "antd";
 import { FileTextOutlined, MessageOutlined, PlusOutlined } from "@ant-design/icons";
 import { history } from '@umijs/max';
 import { eventAPIService } from '@/services/eventAPI';
+import { nostrService } from "@/services/nostr";
+import { usePrivy } from '@privy-io/react-auth';
+import { Relay } from '@ai-chen2050/nostr-tools';
+import { toNostrEvent } from '../../../node_modules/@ai-chen2050/nostr-tools/lib/esm/cip/subspace.js';
+import { serializeEvent } from '../../../node_modules/@ai-chen2050/nostr-tools/lib/esm/pure.js';
 import planetIcon from '../../assets/planet.png';
 import './index.less';
 
@@ -23,8 +28,91 @@ const SubspaceCard: React.FC<SubspaceCardProps> = ({
   proposals,
   posts,
 }) => {
+  const { signMessage, user } = usePrivy();
+  const [loading, setLoading] = useState(false);
+  const [mpcPublicKey, setMpcPublicKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const connectRelay = async () => {
+      try {
+        const relayURL = 'wss://events.teeml.ai';
+        console.log('Connecting to relay...');
+        const relay = await Relay.connect(relayURL);
+        console.log(`Connected to ${relay.url}`);
+
+        // Save relay instance to nostrService
+        console.log('Setting relay in nostrService...');
+        nostrService.setRelay(relay);
+        console.log('Relay set successfully');
+      } catch (error) {
+        console.error('Failed to connect to relay:', error);
+        message.error('连接relay失败');
+      }
+    };
+
+    connectRelay();
+
+    // Cleanup function
+    return () => {
+      console.log('Disconnecting relay...');
+      nostrService.disconnect();
+      console.log('Relay disconnected');
+    };
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      const embeddedWallet = user.linkedAccounts.findLast(account => account.type === 'wallet');
+      if (embeddedWallet) {
+        setMpcPublicKey(embeddedWallet.address);
+        console.log('MPC Wallet Address:', embeddedWallet.address);
+      }
+    }
+  }, [user]);
+
   const handleEnterSubspace = () => {
     history.push(`/governance/${id}`);
+  };
+
+  const handleJoinSubspace = async () => {
+    if (!mpcPublicKey) {
+      message.error("Please connect your wallet first");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // 创建 join 事件
+      const joinEvent = await nostrService.createJoinSubspace(id);
+      console.log('joinEvent', joinEvent);
+
+      // 转换为 Nostr 事件
+      const nostrEvent = toNostrEvent(joinEvent);
+      console.log('nostrEvent', nostrEvent);
+
+      // 设置 pubkey
+      nostrEvent.pubkey = mpcPublicKey.slice(2);
+      console.log('pubkey set:', nostrEvent.pubkey);
+
+      // 序列化事件
+      const messageToSign = serializeEvent(nostrEvent);
+      console.log('messageToSign:', messageToSign);
+
+      // 签名消息
+      const signature = await signMessage(messageToSign);
+      console.log('signature:', signature);
+
+      // 发布 join 事件
+      const signedEvent = await nostrService.publishJoinSubspace(joinEvent, mpcPublicKey.slice(2), signature.slice(2));
+      console.log('signedEvent:', signedEvent);
+
+      message.success("Successfully joined the subspace");
+    } catch (error) {
+      console.error("Error joining subspace:", error);
+      message.error("Failed to join subspace");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,7 +150,19 @@ const SubspaceCard: React.FC<SubspaceCardProps> = ({
         
         {/* Action area: Button on the far right */}
         <div className="card-action-area">
-          <Button color = "default" variant="solid" size="large" onClick={handleEnterSubspace}>
+          <Button
+            type="primary"
+            onClick={handleJoinSubspace}
+            loading={loading}
+            style={{ marginBottom: '8px', width: '100%' }}
+          >
+            Join
+          </Button>
+          <Button
+            type="primary"
+            onClick={handleEnterSubspace}
+            style={{ width: '100%' }}
+          >
             Enter
           </Button>
         </div>

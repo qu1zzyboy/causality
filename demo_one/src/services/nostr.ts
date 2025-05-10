@@ -110,7 +110,6 @@ export class NostrService {
             params.description,
             params.imageURL
         );
-        ValidateSubspaceCreateEvent(subspaceEvent);
         console.log('subspaceEvent', subspaceEvent);
         return subspaceEvent;
     }
@@ -131,21 +130,26 @@ export class NostrService {
     }
 
     // Join subspace
-    async joinSubspace(subspaceID: string): Promise<NostrEvent> {
+    async createJoinSubspace(subspaceID: string): Promise<any> {
+        const joinEvent = NewSubspaceJoinEvent(subspaceID,'');
+        ValidateSubspaceJoinEvent(joinEvent);
+        console.log('joinEvent', joinEvent);
+        return joinEvent;
+    }
+
+    async publishJoinSubspace(rawJoinEvent: any, address: string, sig: string): Promise<NostrEvent> {
+        const eventToFinalize = toNostrEvent(rawJoinEvent);
+        const signedJoinEvent = finalizeEventBySig(eventToFinalize, address, sig) as NostrEvent;
+        
         if (!this.relay) {
             throw new Error('Not connected to relay');
         }
-        if (!this.secretKey) {
-            throw new Error('No secret key available');
-        }
-
-        const joinEvent = NewSubspaceJoinEvent(subspaceID);
-        ValidateSubspaceJoinEvent(joinEvent);
-
-        const signedJoinEvent = finalizeEvent(toNostrEvent(joinEvent), this.secretKey);
-        await this.relay.publish(signedJoinEvent);
+        
+        const result = await this.relay.publish(signedJoinEvent);
+        console.log('Successfully published join event:', result);
         return signedJoinEvent;
     }
+
     async createPost(params: {
         subspaceID: string;
         parentHash: string;
