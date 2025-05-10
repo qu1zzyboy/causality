@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from '@umijs/max';
+import { useParams, useLocation } from '@umijs/max';
 import { Card, Timeline, Typography, Button, Avatar, List, Input, Space, Drawer, Progress, Tag, Modal, Form, message } from 'antd';
-import { FileTextOutlined, MessageOutlined, UserOutlined, SendOutlined, RightOutlined, PlusOutlined } from '@ant-design/icons';
+import { FileTextOutlined, MessageOutlined, UserOutlined, SendOutlined, RightOutlined, PlusOutlined, UserAddOutlined } from '@ant-design/icons';
 
 import { nostrService } from '@/services/nostr';
 import { eventAPIService, Event as NostrEvent } from '@/services/eventAPI';
@@ -77,6 +77,13 @@ const Governance = () => {
 
   const { signMessage, user, login, authenticated } = usePrivy();
   const [mpcPublicKey, setMpcPublicKey] = useState<string | null>(null);
+
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const inviterAddress = searchParams.get('inviter');
+
+  const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
+  const [isProcessingInvite, setIsProcessingInvite] = useState(false);
 
   useEffect(() => {
     const connectRelay = async () => {
@@ -636,6 +643,78 @@ const Governance = () => {
   const displayForVotes = detailedVoteCounts?.for ?? selectedProposal?.votes.for ?? 0;
   const displayAgainstVotes = detailedVoteCounts?.against ?? selectedProposal?.votes.against ?? 0;
 
+  // Add new useEffect for handling invite
+  useEffect(() => {
+    const handleInvite = async () => {
+      if (!inviterAddress || !mpcPublicKey || !subspaceId) return;
+      
+      try {
+        setIsProcessingInvite(true);
+        // 1. 创建邀请事件
+        const inviteEvent = await nostrService.createInvite({
+          subspaceID: subspaceId,
+          inviteePubkey: inviterAddress, // 使用邀请人的地址
+          content: "Invited by " + inviterAddress,
+          rules: "default"
+        });
+        console.log('inviteEvent', inviteEvent);
+
+        // 2. 转换为 Nostr 事件
+        const nostrEvent = toNostrEventGov(inviteEvent);
+        console.log('nostrEvent', nostrEvent);
+
+        // 3. 设置 pubkey
+        nostrEvent.pubkey = mpcPublicKey.slice(2);
+        console.log('pubkey set:', nostrEvent.pubkey);
+
+        // 4. 序列化事件
+        const messageToSign = serializeEvent(nostrEvent);
+        console.log('messageToSign:', messageToSign);
+
+        // 5. 签名
+        const signature = await signMessage(messageToSign);
+        console.log('signature:', signature);
+
+        // 6. 发布
+        const signedEvent = await nostrService.publishInvite(
+          inviteEvent,
+          mpcPublicKey.slice(2),
+          signature.slice(2)
+        );
+        console.log('signedEvent:', signedEvent);
+
+        message.success('Successfully joined the subspace!');
+      } catch (error) {
+        console.error('Error processing invite:', error);
+        message.error('Failed to process invite');
+      } finally {
+        setIsProcessingInvite(false);
+      }
+    };
+
+    if (inviterAddress && mpcPublicKey) {
+      handleInvite();
+    }
+  }, [inviterAddress, mpcPublicKey, subspaceId]);
+
+  const handleInviteClick = () => {
+    if (!mpcPublicKey) {
+      message.error('Please connect your wallet first');
+      return;
+    }
+    setIsInviteModalVisible(true);
+  };
+
+  const handleInviteModalCancel = () => {
+    setIsInviteModalVisible(false);
+  };
+
+  const copyInviteLink = () => {
+    const inviteLink = `${window.location.origin}/governance/${subspaceId}?inviter=${mpcPublicKey}`;
+    navigator.clipboard.writeText(inviteLink);
+    message.success('Invite link copied to clipboard!');
+  };
+
   return (
     <div className="p-6">
       <div className="flex gap-6">
@@ -657,6 +736,13 @@ const Governance = () => {
                     onClick={handleCreatePostOpen} 
                     type="text" 
                     title="Create Post"
+                    style={{ marginLeft: 8 }}
+                  />
+                  <Button 
+                    icon={<UserAddOutlined />} 
+                    onClick={handleInviteClick} 
+                    type="text" 
+                    title="Invite Member"
                     style={{ marginLeft: 8 }}
                   />
                 </div>
@@ -899,6 +985,42 @@ const Governance = () => {
             <TextArea rows={4} placeholder="What's on your mind?" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Invite Modal */}
+      <Modal
+        title="Invite Member"
+        open={isInviteModalVisible}
+        onCancel={handleInviteModalCancel}
+        footer={[
+          <Button key="copy" type="primary" onClick={copyInviteLink}>
+            Copy Invite Link
+          </Button>,
+          <Button key="close" onClick={handleInviteModalCancel}>
+            Close
+          </Button>
+        ]}
+      >
+        <p>Share this link with the member you want to invite:</p>
+        <Input.TextArea
+          value={`${window.location.origin}/governance/${subspaceId}?inviter=${mpcPublicKey}`}
+          readOnly
+          autoSize
+          style={{ marginTop: 16 }}
+        />
+      </Modal>
+
+      {/* Processing Invite Modal */}
+      <Modal
+        title="Processing Invite"
+        open={isProcessingInvite}
+        footer={null}
+        closable={false}
+      >
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <Progress type="circle" percent={100} status="active" />
+          <p style={{ marginTop: 16 }}>Processing your invitation...</p>
+        </div>
       </Modal>
     </div>
   );
