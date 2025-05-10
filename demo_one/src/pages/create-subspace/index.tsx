@@ -28,7 +28,7 @@ const templates: Templates = {
   ModelDAO: {
     name: 'ModelDAO',
     description: 'Standard ModelDAO template with predefined permission levels',
-    ops: 'post=1,propose=2,vote=3,invite=4',
+    ops: 'post=30300,propose=30301,vote=30302,invite=30303,mint=30304',
     rules: 'Standard DAO rules',
     imageURL: '/image.png'
   }

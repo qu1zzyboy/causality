@@ -4,7 +4,7 @@
 import React from 'react';
 
 export async function getRoutes() {
-  const routes = {"1":{"parentId":"@@/global-layout","id":"1"},"2":{"path":"/","redirect":"/home","parentId":"1","id":"2"},"3":{"path":"/vote","parentId":"1","id":"3"},"4":{"path":"/alignment","parentId":"1","id":"4"},"5":{"path":"/governance/:subspaceId","parentId":"1","id":"5"},"6":{"path":"/create-subspace","parentId":"1","id":"6"},"7":{"path":"/causalitygraph","parentId":"1","id":"7"},"8":{"path":"/model","parentId":"1","id":"8"},"9":{"path":"/model/create","parentId":"1","id":"9"},"10":{"path":"/profile","parentId":"1","id":"10"},"11":{"path":"/home","parentId":"1","id":"11"},"@@/global-layout":{"id":"@@/global-layout","path":"/","isLayout":true}} as const;
+  const routes = {"1":{"parentId":"@@/global-layout","id":"1"},"2":{"path":"/","redirect":"/home","parentId":"1","id":"2"},"3":{"path":"/vote","parentId":"1","id":"3"},"4":{"path":"/alignment","parentId":"1","id":"4"},"5":{"path":"/governance/:subspaceId","parentId":"1","id":"5"},"6":{"path":"/create-subspace","parentId":"1","id":"6"},"7":{"path":"/causalitygraph","parentId":"1","id":"7"},"8":{"path":"/model","parentId":"1","id":"8"},"9":{"path":"/model/create","parentId":"1","id":"9"},"10":{"path":"/profile","parentId":"1","id":"10"},"11":{"path":"/home","parentId":"1","id":"11"},"12":{"path":"/model/create-project","parentId":"1","id":"12"},"13":{"path":"/model/project","parentId":"1","id":"13"},"14":{"path":"/model/project/:id","parentId":"1","id":"14"},"@@/global-layout":{"id":"@@/global-layout","path":"/","isLayout":true}} as const;
   return {
     routes,
     routeComponents: {
@@ -19,6 +19,9 @@ export async function getRoutes() {
 '9': React.lazy(() => import(/* webpackChunkName: "p__model__create__index" */'@/pages/model/create/index.tsx')),
 '10': React.lazy(() => import(/* webpackChunkName: "p__profile__index" */'@/pages/profile/index.tsx')),
 '11': React.lazy(() => import(/* webpackChunkName: "p__home__index" */'@/pages/home/index.tsx')),
+'12': React.lazy(() => import(/* webpackChunkName: "p__model__create-project__index" */'@/pages/model/create-project/index.tsx')),
+'13': React.lazy(() => import(/* webpackChunkName: "p__model__project__index" */'@/pages/model/project/index.tsx')),
+'14': React.lazy(() => import(/* webpackChunkName: "p__model__project__index" */'@/pages/model/project/index.tsx')),
 '@@/global-layout': React.lazy(() => import(/* webpackChunkName: "layouts__index" */'/home/litterpigger/hetu/causality/demo_one/src/layouts/index.tsx')),
 },
   };

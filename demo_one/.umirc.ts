@@ -51,6 +51,18 @@ export default defineConfig({
         {
           path: "/home",
           component: "@/pages/home",
+        },
+        {
+          path: "/model/create-project",
+          component: "@/pages/model/create-project",
+        },
+        {
+          path: "/model/project",
+          component: "@/pages/model/project",
+        },
+        {
+          path: "/model/project/:id",
+          component: "@/pages/model/project",
         }
       ],
     },

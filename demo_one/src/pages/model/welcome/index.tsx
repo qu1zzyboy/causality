@@ -1,30 +1,78 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Empty } from 'antd';
-import { MessageOutlined } from '@ant-design/icons';
+import { Button, Card, Empty, Statistic } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import welcome from '@/assets/welcome.png';
+import './index.less';
 
-interface ModelData {
+interface ProjectData {
   id: number;
-  model_name: string;
-  image_url: string;
-  dataset: string;
-  num_epochs: number;
-  batch_size: number;
+  name: string;
   description: string;
+  imageUrl: string;
+  createdAt: string;
+  models: any[];
 }
+
+const ProjectCard: React.FC<ProjectData> = ({
+  id,
+  name,
+  description,
+  imageUrl,
+  models,
+}) => {
+  const navigate = useNavigate();
+
+  const handleEnterProject = () => {
+    navigate(`/model/project/${id}`);
+  };
+
+  return (
+    <Card className="project-card">
+      <div className="card-layout-wrapper">
+        <div className="card-main-content">
+          <div className="card-image">
+            <img
+              src={imageUrl}
+              alt={name}
+              className="image"
+            />
+          </div>
+          
+          <div className="card-info-block">
+            <h2 className="card-title">{name}</h2>
+            <p className="card-description">{description}</p>
+            <div className="card-stats">
+              <Statistic
+                title="Models"
+                value={models?.length || 0}
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="card-action-area">
+          <Button type="primary" onClick={handleEnterProject}>
+            Enter
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 const WelcomePage: React.FC = () => {
   const navigate = useNavigate();
-  const [models, setModels] = useState<ModelData[]>([]);
+  const [projects, setProjects] = useState<ProjectData[]>([]);
 
   useEffect(() => {
-    const userModels = JSON.parse(localStorage.getItem('userModels') || '[]');
-    setModels(userModels);
+    // Read projects from localStorage
+    const userProjects = JSON.parse(localStorage.getItem('userProjects') || '[]');
+    setProjects(userProjects);
   }, []);
 
-  const renderModelList = () => {
-    if (models.length === 0) {
+  const renderProjectList = () => {
+    if (projects.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center w-full h-screen">
           <img
@@ -38,14 +86,14 @@ const WelcomePage: React.FC = () => {
           </p>
           <Button
             type="primary"
-            onClick={() => navigate('/model/create')}
+            onClick={() => navigate('/model/create-project')}
             style={{
               padding: '10px 20px',
               height: 'auto',
               fontWeight: 'bold',
             }}
           >
-            Create fine-tuned model
+            Create your project
           </Button>
         </div>
       );
@@ -54,55 +102,25 @@ const WelcomePage: React.FC = () => {
     return (
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Your Models</h1>
-          <Button type="primary" onClick={() => navigate('/model/create')}>
-            Create New Model
+          <h1 className="text-2xl font-bold">Your Projects</h1>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />}
+            onClick={() => navigate('/model/create-project')}
+          >
+            Create New Project
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {models.map((model) => (
-            <Card key={model.id} className="hover:shadow-lg transition-shadow">
-              <div className="flex items-start">
-                <div className="w-1/3">
-                  <img
-                    src={model.image_url}
-                    alt={model.model_name}
-                    className="w-full h-auto rounded"
-                    style={{ maxHeight: '100px', objectFit: 'cover' }}
-                  />
-                  <div className="mt-2 text-sm">
-                    <div className="font-bold">{model.model_name}</div>
-                    <div className="text-gray-500">Dataset: {model.dataset}</div>
-                  </div>
-                </div>
-                <div className="w-1/3 px-4">
-                  <div className="text-sm">
-                    <div className="mb-1">
-                      <span className="font-medium">Epochs:</span> {model.num_epochs}
-                    </div>
-                    <div>
-                      <span className="font-medium">Batch:</span> {model.batch_size}
-                    </div>
-                  </div>
-                </div>
-                <div className="w-1/3 flex justify-end">
-                  <Button
-                    type="primary"
-                    icon={<MessageOutlined />}
-                    onClick={() => navigate(`/model/chat/${model.id}`)}
-                  >
-                    Chat
-                  </Button>
-                </div>
-              </div>
-            </Card>
+        <div className="project-grid">
+          {projects.map((project) => (
+            <ProjectCard key={project.id} {...project} />
           ))}
         </div>
       </div>
     );
   };
 
-  return renderModelList();
+  return renderProjectList();
 };
 
 export default WelcomePage;
