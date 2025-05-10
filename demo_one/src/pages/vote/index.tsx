@@ -154,14 +154,23 @@ const SubspaceCard: React.FC<SubspaceCardProps> = ({
             type="primary"
             onClick={handleJoinSubspace}
             loading={loading}
-            style={{ marginBottom: '8px', width: '100%' }}
+            style={{ 
+              marginBottom: '12px', 
+              width: '100%',
+              backgroundColor: '#000000',
+              borderColor: '#000000'
+            }}
           >
             Join
           </Button>
           <Button
             type="primary"
             onClick={handleEnterSubspace}
-            style={{ width: '100%' }}
+            style={{ 
+              width: '100%',
+              backgroundColor: '#000000',
+              borderColor: '#000000'
+            }}
           >
             Enter
           </Button>
@@ -178,16 +187,10 @@ const Vote = () => {
   useEffect(() => {
     const fetchSubspaces = async () => {
       try {
-        const events = await eventAPIService.getAllEvents();
+        const events = await eventAPIService.getEventsByKind(30100);
         
-        // Filter events that create subspaces
-        const subspaceEvents = events.filter(event => 
-          event.kind === 30100 && 
-          event.tags.some(tag => tag[0] === 'd' && tag[1] === 'subspace_create')
-        );
-        console.log('subspaceEvents:', subspaceEvents);
         // Process subspace data
-        const processedSubspacesPromises = subspaceEvents.map(async (event) => {
+        const processedSubspacesPromises = events.map(async (event) => {
           // Get subspace name from tags
           const nameTag = event.tags.find(tag => tag[0] === 'subspace_name');
           const name = nameTag ? nameTag[1] : 'Unnamed Subspace';
@@ -198,42 +201,34 @@ const Vote = () => {
 
           if (!subspaceId) {
             console.error('Subspace ID (sid) not found in event tags:', event);
-            return null; // Skip this event if sid is not found
+            return null;
           }
 
-          // Get description from content
+          // Get description and image URL from content
           let description = '';
-          try {
-            const contentObj = JSON.parse(event.content);
-            description = contentObj.desc || 'No description available';
-          } catch (e) {
-            description = 'No description available';
-          }
-
-          // Get image URL from tags
           let imageUrl = '';
           try {
             const contentObj = JSON.parse(event.content);
-            imageUrl = contentObj.img_url || '/image.png'; // Default image
+            description = contentObj.desc || 'No description available';
+            imageUrl = contentObj.img_url || '/image.png';
           } catch (e) {
-            imageUrl = '/image.png'; // Default image
+            description = 'No description available';
+            imageUrl = '/image.png';
           }
 
           let proposalsCount = 0;
           let postsCount = 0;
 
           try {
-            // event.id is the sid for the subspace
             const details = await eventAPIService.getSubspaceDetails(subspaceId);
             proposalsCount = details.keys["30301"] || 0;
             postsCount = details.keys["30300"] || 0;
           } catch (detailError) {
             console.error(`Failed to get details for subspace ${subspaceId}:`, detailError);
-            // Keep counts as 0 if details fetch fails
           }
 
           return {
-            id: subspaceId, // This is the subspace_id (sid)
+            id: subspaceId,
             name,
             description,
             image: imageUrl,
@@ -243,7 +238,6 @@ const Vote = () => {
         });
 
         const resolvedSubspacesWithDetails = await Promise.all(processedSubspacesPromises);
-        // Filter out any nulls that resulted from missing sids
         const validSubspaces = resolvedSubspacesWithDetails.filter(s => s !== null) as SubspaceCardProps[];
         setSubspaces(validSubspaces);
       } catch (error) {

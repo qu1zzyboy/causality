@@ -56,15 +56,15 @@
 // Card styles for the new structure
 .card-layout-wrapper {
   display: flex;
-  justify-content: space-between; // Positions main content and action area
-  align-items: stretch;      // Changed from flex-start to stretch for better vertical centering of action area
-  gap: @card-padding;             // Gap between main content and action area
+  flex-direction: row;
+  justify-content: space-between;
+  gap: @card-padding;
 }
 
 .card-main-content {
   display: flex;
-  flex-grow: 1;                 // Allows this section to take up available space
-  gap: @card-padding;             // Gap between image and info-block
+  flex-grow: 1;
+  gap: @card-padding;
 }
 
 .card-image {
@@ -137,11 +137,12 @@
   }
 }
 
-.card-action-area { // Replaces .card-footer for positioning the button
+.card-action-area {
   display: flex;
-  align-items: center; // Vertically center the button. Use flex-start if top alignment is preferred.
-  justify-content: flex-end;
-  flex-shrink: 0;       // Prevent the button area from shrinking
+  flex-direction: column;
+  width: 120px;
+  flex-shrink: 0;
+  gap: 12px;
 }
 
 .enter-button {

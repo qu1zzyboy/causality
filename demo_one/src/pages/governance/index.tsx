@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation } from '@umijs/max';
 import { Card, Timeline, Typography, Button, Avatar, List, Input, Space, Drawer, Progress, Tag, Modal, Form, message } from 'antd';
 import { FileTextOutlined, MessageOutlined, UserOutlined, SendOutlined, RightOutlined, PlusOutlined, UserAddOutlined } from '@ant-design/icons';
@@ -84,6 +84,8 @@ const Governance = () => {
 
   const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
   const [isProcessingInvite, setIsProcessingInvite] = useState(false);
+  const hasProcessedRef = useRef(false);
+  const hasPromptedLoginRef = useRef(false);
 
   useEffect(() => {
     const connectRelay = async () => {
@@ -643,10 +645,33 @@ const Governance = () => {
   const displayForVotes = detailedVoteCounts?.for ?? selectedProposal?.votes.for ?? 0;
   const displayAgainstVotes = detailedVoteCounts?.against ?? selectedProposal?.votes.against ?? 0;
 
-  // Add new useEffect for handling invite
+  // 处理钱包连接
+  useEffect(() => {
+    if (!inviterAddress || !subspaceId) return;
+    
+    // 如果已经提示过登录，直接返回
+    if (hasPromptedLoginRef.current) return;
+
+    // 如果没有连接钱包，提示用户连接
+    if (!authenticated) {
+      message.info('Please connect your wallet to process the invitation');
+      login();
+      hasPromptedLoginRef.current = true;
+    }
+  }, [inviterAddress, subspaceId, authenticated, login]);
+
+  // 处理邀请
   useEffect(() => {
     const handleInvite = async () => {
-      if (!inviterAddress || !mpcPublicKey || !subspaceId) return;
+      if (!inviterAddress || !subspaceId) return;
+      
+      // 如果已经处理过邀请，直接返回
+      if (hasProcessedRef.current) return;
+
+      // 如果未连接钱包或没有 MPC 公钥，等待
+      if (!authenticated || !mpcPublicKey) {
+        return;
+      }
       
       try {
         setIsProcessingInvite(true);
@@ -684,6 +709,7 @@ const Governance = () => {
         console.log('signedEvent:', signedEvent);
 
         message.success('Successfully joined the subspace!');
+        hasProcessedRef.current = true; // 标记邀请已处理
       } catch (error) {
         console.error('Error processing invite:', error);
         message.error('Failed to process invite');
@@ -692,10 +718,10 @@ const Governance = () => {
       }
     };
 
-    if (inviterAddress && mpcPublicKey) {
+    if (inviterAddress) {
       handleInvite();
     }
-  }, [inviterAddress, mpcPublicKey, subspaceId]);
+  }, [inviterAddress, mpcPublicKey, subspaceId, authenticated]);
 
   const handleInviteClick = () => {
     if (!mpcPublicKey) {
