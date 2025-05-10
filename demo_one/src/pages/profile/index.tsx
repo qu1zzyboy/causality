@@ -5,6 +5,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import * as echarts from 'echarts';
 import { eventAPIService, UserInvites, UserStats } from '@/services/eventAPI';
 import styles from './index.less';
+import { history } from '@umijs/max';
 
 const { Title, Text } = Typography;
 
@@ -24,11 +25,22 @@ interface SubspaceCard {
   voteCount: number;
 }
 
+interface SubspaceCardProps {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  proposals: number;
+  posts: number;
+}
+
 const HomePage: React.FC = () => {
   const { authenticated, ready, user } = usePrivy();
   const chartRef = useRef<HTMLDivElement>(null);
   const [userInvites, setUserInvites] = useState<UserInvites | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [userSubspaces, setUserSubspaces] = useState<SubspaceCardProps[]>([]);
+  const [loadingSubspaces, setLoadingSubspaces] = useState(false);
 
   // Calculate total keys based on stats
   const calculateTotalKeys = (stats: UserStats | null): number => {
@@ -54,7 +66,7 @@ const HomePage: React.FC = () => {
             // Remove '0x' prefix from address
             const address = embeddedWallet.address.slice(2);
             
-            // Fetch both invites and stats
+            // First fetch invites and stats
             const [invites, stats] = await Promise.all([
               eventAPIService.getUserInvites(embeddedWallet.address),
               eventAPIService.getUserStats(address)
@@ -62,6 +74,43 @@ const HomePage: React.FC = () => {
             
             setUserInvites(invites);
             setUserStats(stats);
+
+            // Then fetch subspaces with loading state
+            setLoadingSubspaces(true);
+            try {
+              const subspaceEvents = await eventAPIService.getEventsByKind(30100);
+              
+              // Process subspace events
+              const userCreatedSubspaces = subspaceEvents
+                .filter(event => event.pubkey === address)
+                .map(event => {
+                  const nameTag = event.tags.find(tag => tag[0] === 'subspace_name');
+                  const sidTag = event.tags.find(tag => tag[0] === 'sid');
+                  let description = '';
+                  let imageUrl = '';
+                  try {
+                    const contentObj = JSON.parse(event.content);
+                    description = contentObj.desc || 'No description available';
+                    imageUrl = contentObj.img_url || '/image.png';
+                  } catch (e) {
+                    description = 'No description available';
+                    imageUrl = '/image.png';
+                  }
+
+                  return {
+                    id: sidTag ? sidTag[1] : '',
+                    name: nameTag ? nameTag[1] : 'Unnamed Subspace',
+                    description,
+                    image: imageUrl,
+                    proposals: 0,
+                    posts: 0
+                  };
+                });
+
+              setUserSubspaces(userCreatedSubspaces);
+            } finally {
+              setLoadingSubspaces(false);
+            }
           } catch (error) {
             console.error('Failed to fetch user data:', error);
           }
@@ -77,8 +126,8 @@ const HomePage: React.FC = () => {
       const myChart = echarts.init(chartRef.current);
 
       // 准备节点数据
-      const nodes = [];
-      const links = [];
+      const nodes: any[] = [];
+      const links: { source: string; target: string }[] = [];
 
       // 添加中心节点（当前用户）
       if (user) {
@@ -184,23 +233,6 @@ const HomePage: React.FC = () => {
     inviteCount: 8,
   };
 
-  const userSubspaces: SubspaceCard[] = [
-    {
-      id: '1',
-      name: 'AI Research',
-      image: 'https://example.com/subspace1.jpg',
-      proposalCount: 5,
-      voteCount: 23,
-    },
-    {
-      id: '2',
-      name: 'Blockchain Development',
-      image: 'https://example.com/subspace2.jpg',
-      proposalCount: 3,
-      voteCount: 15,
-    },
-  ];
-
   if (!ready) {
     return <div>Loading...</div>;
   }
@@ -286,8 +318,8 @@ const HomePage: React.FC = () => {
       </Card>
 
       {/* Subspaces Section */}
-      <Card className={styles.subspacesCard}>
-        <Title level={4}>Your Subspaces</Title>
+      <Card className={styles.subspacesCard} loading={loadingSubspaces}>
+        <Title level={4}>Your Created Subspaces</Title>
         <Row gutter={[16, 24]}>
           {userSubspaces.map((subspace) => (
             <Col xs={24} sm={12} md={12} lg={8} xl={8} key={subspace.id}>
@@ -297,16 +329,10 @@ const HomePage: React.FC = () => {
               >
                 <Card.Meta
                   title={subspace.name}
-                  description={
-                    <div>
-                      <Text>Proposals: {subspace.proposalCount}</Text>
-                      <br />
-                      <Text>Votes: {subspace.voteCount}</Text>
-                    </div>
-                  }
+                  description={subspace.description}
                 />
                 <div style={{ marginTop: 16, textAlign: 'center' }}>
-                  <Button type="primary">
+                  <Button type="primary" onClick={() => history.push(`/governance/${subspace.id}`)}>
                     Token Launch
                   </Button>
                 </div>
@@ -340,3 +366,4 @@ const HomePage: React.FC = () => {
 };
 
 export default HomePage;
+
