@@ -46,7 +46,7 @@ const SubspaceCard: React.FC<SubspaceCardProps> = ({
         console.log('Relay set successfully');
       } catch (error) {
         console.error('Failed to connect to relay:', error);
-        message.error('连接relay失败');
+        message.error('Failed to connect to relay');
       }
     };
 
@@ -82,27 +82,27 @@ const SubspaceCard: React.FC<SubspaceCardProps> = ({
 
     try {
       setLoading(true);
-      // 创建 join 事件
+      // Create join event
       const joinEvent = await nostrService.createJoinSubspace(id);
       console.log('joinEvent', joinEvent);
 
-      // 转换为 Nostr 事件
+      // Convert to Nostr event
       const nostrEvent = toNostrEvent(joinEvent);
       console.log('nostrEvent', nostrEvent);
 
-      // 设置 pubkey
+      // Set pubkey
       nostrEvent.pubkey = mpcPublicKey.slice(2);
       console.log('pubkey set:', nostrEvent.pubkey);
 
-      // 序列化事件
+      // Serialize event
       const messageToSign = serializeEvent(nostrEvent);
       console.log('messageToSign:', messageToSign);
 
-      // 签名消息
+      // Sign message
       const signature = await signMessage(messageToSign);
       console.log('signature:', signature);
 
-      // 发布 join 事件
+      // Publish join event
       const signedEvent = await nostrService.publishJoinSubspace(joinEvent, mpcPublicKey.slice(2), signature.slice(2));
       console.log('signedEvent:', signedEvent);
 

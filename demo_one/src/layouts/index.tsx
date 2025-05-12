@@ -32,11 +32,11 @@ export default function CustomLayout() {
       <Layout className="main-layout">
         <Sider width={200} className="main-sider">
           <div className="sider-title">
-            <span>AI4Science</span>
+            <span>OS Demo</span>
           </div>
           <Menu
             mode="inline"
-            defaultSelectedKeys={['6']}
+            defaultSelectedKeys={['1']}
             style={{ height: 'calc(100% - 70px)', borderRight: 0 }}
             theme="dark"
           >
@@ -47,7 +47,7 @@ export default function CustomLayout() {
               <UmiLink to="/vote">DeGovernance</UmiLink>
             </Menu.Item>
             <Menu.Item key="5" icon={<DeploymentUnitOutlined />}>
-              <UmiLink to="/model">Model</UmiLink>
+              <UmiLink to="/model">ModelDAO</UmiLink>
             </Menu.Item>
             <Menu.Item key="6" icon={<UserOutlined />}>
               <UmiLink to="/profile">Profile</UmiLink>

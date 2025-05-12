@@ -9,7 +9,9 @@ import {
 } from '../../node_modules/@ai-chen2050/nostr-tools/lib/esm/cip/subspace.js'
 import {KindSubspaceCreate} from '../../node_modules/@ai-chen2050/nostr-tools/lib/esm/cip/constants.js'
 import {newPostEvent, newVoteEvent, newProposeEvent, newInviteEvent, toNostrEvent as toNostrEventGov,setProposal} from '../../node_modules/@ai-chen2050/nostr-tools/lib/esm/cip/cip01/governance.js'
+import { newMintEvent} from '../../node_modules/@ai-chen2050/crelay-js-sdk/lib/esm/cip/cip01/governance.js';
 import { ethers } from 'ethers';
+import { Modal, Form, Input, InputNumber, message } from 'antd';
 
 interface NostrEvent {
     id: string;
@@ -300,6 +302,39 @@ export class NostrService {
         const recoveredAddress = ethers.utils.verifyMessage(signedMessage, signature);
         console.log("Recovered address:", recoveredAddress);
         return recoveredAddress;
+    }
+
+    // Create mint event
+    async createMint(params: {
+        subspaceID: string;
+        tokenName: string;
+        tokenSymbol: string;
+        tokenDecimals: string;
+        initialSupply: string;
+        dropRatio: string;
+        content: string;
+    }): Promise<any> {
+        const mintEvent = await newMintEvent(params.subspaceID, params.content);
+        if (!mintEvent) {
+            throw new Error('Failed to create mint event');
+        }
+        mintEvent.setTokenInfo(params.tokenName, params.tokenSymbol, params.tokenDecimals);
+        mintEvent.setMintDetails(params.initialSupply, params.dropRatio);
+        return mintEvent;
+    }
+
+    // Publish mint event
+    async publishMint(rawMintEvent: any, address: string, sig: string): Promise<NostrEvent> {
+        const eventToFinalize = toNostrEvent(rawMintEvent);
+        const signedMintEvent = finalizeEventBySig(eventToFinalize, address, sig) as NostrEvent;
+
+        if (!this.relay) {
+            throw new Error('Not connected to relay');
+        }
+
+        const result = await this.relay.publish(signedMintEvent);
+        console.log('Successfully published mint event:', result);
+        return signedMintEvent;
     }
 }
 // Create singleton instance

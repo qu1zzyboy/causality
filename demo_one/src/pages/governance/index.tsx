@@ -90,11 +90,8 @@ const Governance = () => {
   useEffect(() => {
     const connectRelay = async () => {
       try {
-        // TODO: Consider moving relayURL to a config file
         const relayURL = 'wss://events.teeml.ai';
-        // console.log('Connecting to relay for governance...');
         const relayInstance = await Relay.connect(relayURL);
-        // console.log(`Connected to ${relayInstance.url} for governance`);
         nostrService.setRelay(relayInstance);
         console.log('Relay set successfully in nostrService for governance');
       } catch (error) {
@@ -104,10 +101,8 @@ const Governance = () => {
     };
     connectRelay();
 
-    // Cleanup function (optional, depends on nostrService behavior)
     return () => {
-      // console.log('Disconnecting relay from governance page...');
-      // nostrService.disconnect(); // Be cautious if other components rely on this singleton connection
+      // Cleanup function
     };
   }, []);
 
@@ -328,10 +323,10 @@ const Governance = () => {
     setIsSubmittingComment(true);
     try {
       const commentContent = newComment.trim();
-      const parentId = selectedProposal.id; // Use proposal id as parentHash for the comment
-      const contentType = 'text'; // Test value, or make this 'markdown' if comments support it
+      const parentId = selectedProposal.id;
+      const contentType = 'text';
       console.log('parentId', parentId);
-      // 1. Create post event structure for the comment
+      
       const rawCommentEvent = await nostrService.createPost({
         subspaceID: subspaceId,
         content: commentContent,
@@ -339,19 +334,16 @@ const Governance = () => {
         contentType: contentType,
       });
 
-      // 2. Prepare event for signing
       const eventForSigning = toNostrEventGov(rawCommentEvent);
       eventForSigning.pubkey = mpcPublicKey.slice(2);
 
       const messageToSign = serializeEvent(eventForSigning);
 
-      // 3. Request user signature
       const signature = await signMessage(messageToSign);
       if (!signature) {
         throw new Error('Failed to get signature from user for comment.');
       }
 
-      // 4. Publish comment using nostrService.publishPost
       await nostrService.publishPost(
         rawCommentEvent,
         mpcPublicKey.slice(2),
@@ -359,12 +351,9 @@ const Governance = () => {
       );
 
       message.success('Comment posted successfully!');
-      setNewComment(''); // Clear comment input
-      // TODO: Refresh comments for the selectedProposal or update local state
-      // For example, optimistic update or re-fetch:
-      // fetchCommentsForProposal(selectedProposal.id);
-      if (selectedProposal) { // Ensure selectedProposal is not null
-        fetchCommentsForProposal(selectedProposal.id); // Refresh comments after posting new one
+      setNewComment('');
+      if (selectedProposal) {
+        fetchCommentsForProposal(selectedProposal.id);
       }
 
     } catch (error: any) {
@@ -378,12 +367,11 @@ const Governance = () => {
   const handleCreateProposalOpen = () => {
     if (!authenticated) {
       message.info('Please log in to create a proposal.');
-      login(); // Prompt Privy login
+      login();
       return;
     }
     if (!mpcPublicKey) {
       message.info('No wallet found. Please ensure your wallet is connected and accessible via Privy.');
-      // Optionally, provide guidance or rely on Privy's UI post-login for wallet setup.
       return;
     }
     if (!subspaceId) {
@@ -472,7 +460,7 @@ const Governance = () => {
   const handleCreatePostOpen = () => {
     if (!authenticated) {
       message.info('Please log in to create a post.');
-      login(); // Prompt Privy login
+      login();
       return;
     }
     if (!mpcPublicKey) {
@@ -579,44 +567,30 @@ const Governance = () => {
 
     setIsSubmittingVote(true);
     try {
-      // console.log(`Submitting vote: ${voteChoice} for proposal: ${selectedProposal.id}`);
-
-      // 1. Create vote event structure
       const rawVoteEvent = await nostrService.createVote({
         subspaceID: subspaceId,
         targetId: selectedProposal.id,
         vote: voteChoice,
-        content: '' // Empty content as requested
+        content: ''
       });
-      // console.log('Raw vote event:', JSON.stringify(rawVoteEvent, null, 2));
 
-      // 2. Prepare event for signing
       const eventForSigning = toNostrEventGov(rawVoteEvent);
       eventForSigning.pubkey = mpcPublicKey.slice(2);
-      // console.log('Vote event for signing:', JSON.stringify(eventForSigning, null, 2));
 
       const messageToSign = serializeEvent(eventForSigning);
-      // console.log('Message to sign for vote:', messageToSign);
 
-      // 3. Request user signature
       const signature = await signMessage(messageToSign);
       if (!signature) {
         throw new Error('Failed to get signature from user for vote.');
       }
-      // console.log('Signature for vote received:', signature);
 
-      // 4. Publish vote
       await nostrService.publishVote(
         rawVoteEvent,
         mpcPublicKey.slice(2),
         signature.slice(2)
       );
 
-      message.success(`Successfully voted '${voteChoice}'!`)
-      // TODO: Refresh proposal data to update vote counts or optimistically update UI.
-      // For now, a simple console log or perhaps re-fetch proposals might be needed.
-      // fetchProposalsForTimeline(); // This would refetch all proposals
-      // Or, more targeted, fetch and update just the selectedProposal's vote counts if possible.
+      message.success(`Successfully voted '${voteChoice}'!`);
       if (selectedProposal && subspaceId) {
         fetchProposalVotes(selectedProposal.id, subspaceId).then(result => {
           setDetailedVoteCounts(result.counts);

@@ -56,7 +56,7 @@ const CreateSubspace = () => {
         console.log('Relay set successfully');
       } catch (error) {
         console.error('Failed to connect to relay:', error);
-        message.error('连接relay失败');
+        message.error('Failed to connect to relay');
       }
     };
     console.log('user',user)
@@ -94,7 +94,7 @@ const CreateSubspace = () => {
   const onFinish = async (values: any) => {
     try {
       if (!mpcPublicKey) {
-        throw new Error('请先连接钱包');
+        throw new Error('Please connect your wallet first');
       }
 
       setIsCreating(true);
@@ -125,7 +125,7 @@ const CreateSubspace = () => {
       console.log('5. Signature received:', signature);
       
       if (!signature) {
-        throw new Error('签名失败');
+        throw new Error('Signature failed');
       }
 
       // 3. Publish subspace
@@ -137,7 +137,7 @@ const CreateSubspace = () => {
       
       await nostrService.PublishCreateSubspace(subspaceEvent, mpcPublicKey.slice(2), signature.slice(2));
       
-      message.success('子空间创建成功!');
+      message.success('Subspace created successfully!');
       history.push('/vote');
     } catch (error) {
       console.error('Error in onFinish:', error);
@@ -147,7 +147,7 @@ const CreateSubspace = () => {
         message: error instanceof Error ? error.message : String(error),
         cause: error instanceof Error ? error.cause : undefined
       });
-      const errorMessage = error instanceof Error ? error.message : '创建子空间失败';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create subspace';
       message.error(errorMessage);
     } finally {
       setIsCreating(false);
@@ -181,7 +181,7 @@ const CreateSubspace = () => {
             >
               <Option value="ModelDAO">
                 <div className="flex justify-between items-center">
-                  <span>ModelDAO</span>
+                  <span>Template one</span>
                   <Text type="secondary" className="text-sm">
                     Standard DAO Template
                   </Text>

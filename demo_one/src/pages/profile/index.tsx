@@ -42,21 +42,6 @@ const HomePage: React.FC = () => {
   const [userSubspaces, setUserSubspaces] = useState<SubspaceCardProps[]>([]);
   const [loadingSubspaces, setLoadingSubspaces] = useState(false);
 
-  // Calculate total keys based on stats
-  const calculateTotalKeys = (stats: UserStats | null): number => {
-    if (!stats) return 0;
-    
-    const totalStats = stats.total_stats;
-    return (
-      (totalStats[KindSubspaceCreate] || 0) * 10 + // 创建 subspace
-      (totalStats[KindSubspaceJoin] || 0) * 1 +    // 加入 subspace
-      (totalStats[KindGovernancePost] || 0) * 1 +  // 发言
-      (totalStats[KindGovernancePropose] || 0) * 5 + // 提案
-      (totalStats[KindGovernanceVote] || 0) * 2 +  // 投票
-      (totalStats[KindGovernanceInvite] || 0) * 5   // 邀请
-    );
-  };
-
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
@@ -120,6 +105,21 @@ const HomePage: React.FC = () => {
 
     fetchUserData();
   }, [user]);
+
+  // Calculate total keys based on stats
+  const calculateTotalKeys = (stats: UserStats | null): number => {
+    if (!stats) return 0;
+    
+    const totalStats = stats.total_stats;
+    return (
+      (totalStats[KindSubspaceCreate] || 0) * 10 + // Create subspace
+      (totalStats[KindSubspaceJoin] || 0) * 1 +    // Join subspace
+      (totalStats[KindGovernancePost] || 0) * 1 +  // Post
+      (totalStats[KindGovernancePropose] || 0) * 5 + // Propose
+      (totalStats[KindGovernanceVote] || 0) * 2 +  // Vote
+      (totalStats[KindGovernanceInvite] || 0) * 5   // Invite
+    );
+  };
 
   useEffect(() => {
     if (chartRef.current && userInvites) {

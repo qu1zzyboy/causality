@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@ai-chen2050/crelay-js-sdk':
+        specifier: ^2.12.5
+        version: 2.12.5(@types/node@18.19.86)(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
       '@ai-chen2050/nostr-tools':
         specifier: ^2.12.0
         version: 2.12.0(@types/node@18.19.86)(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
@@ -88,6 +91,14 @@ packages:
     resolution: {integrity: sha512-xhVaM4fyIiAMdVFuuU5i3CFUdFa/IblF+fvITVMFaUEO3w/V5tVCAF6WIA3T03n1/RPuzRkA7Ao1PFtSGtGelw==, tarball: https://registry.npmjs.org/@ahooksjs/use-request/-/use-request-2.8.15.tgz}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0
+
+  '@ai-chen2050/crelay-js-sdk@2.12.5':
+    resolution: {integrity: sha512-pqq/bwl7ym1tbbj+h14Ts0ZfCrYCzoDMvca1zhtYY5Wh9eu+sgjoCXMi813j+t8VdDHiisaRtCMktQuqOIwqgg==, tarball: https://registry.npmjs.org/@ai-chen2050/crelay-js-sdk/-/crelay-js-sdk-2.12.5.tgz}
+    peerDependencies:
+      typescript: '>=5.0.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   '@ai-chen2050/nostr-tools@2.12.0':
     resolution: {integrity: sha512-4/8pOsHsrPU1HW8bedNbPcb1qR/Pg/JYjPcYCELEZTGUWu4bRbt4XPKKVyw5XXzvnSr229lJqvBWQ6AFpd9tVw==, tarball: https://registry.npmjs.org/@ai-chen2050/nostr-tools/-/nostr-tools-2.12.0.tgz}
@@ -8455,6 +8466,30 @@ snapshots:
       lodash.debounce: 4.0.8
       lodash.throttle: 4.1.1
       react: 18.3.1
+
+  '@ai-chen2050/crelay-js-sdk@2.12.5(@types/node@18.19.86)(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@noble/ciphers': 0.5.3
+      '@noble/curves': 1.2.0
+      '@noble/hashes': 1.3.1
+      '@scure/base': 1.1.1
+      '@scure/bip32': 1.3.1
+      '@scure/bip39': 1.2.1
+      glob: 11.0.2
+      jest: 29.7.0(@types/node@18.19.86)
+      micro-eth-signer: 0.14.0
+      ws: 8.18.2(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+    optionalDependencies:
+      nostr-wasm: 0.1.0
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - '@types/node'
+      - babel-plugin-macros
+      - bufferutil
+      - node-notifier
+      - supports-color
+      - ts-node
+      - utf-8-validate
 
   '@ai-chen2050/nostr-tools@2.12.0(@types/node@18.19.86)(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)':
     dependencies:

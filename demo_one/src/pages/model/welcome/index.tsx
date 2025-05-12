@@ -80,7 +80,7 @@ const WelcomePage: React.FC = () => {
             alt="welcome"
             style={{ width: '200px', marginBottom: '20px' }}
           />
-          <h1 style={{ fontSize: '2rem', marginBottom: '10px' }}>Model station</h1>
+          <h1 style={{ fontSize: '2rem', marginBottom: '10px' }}>Model graph</h1>
           <p style={{ maxWidth: '400px', margin: '0 auto 30px', lineHeight: '1.5' }}>
             A one-stop solution to manage your AI models, create, bind, and distribute them with no coding required.
           </p>
