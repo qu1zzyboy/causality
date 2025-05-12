@@ -327,8 +327,7 @@ export class NostrService {
 
     // Publish mint event
     async publishMint(rawMintEvent: any, address: string, sig: string): Promise<NostrEvent> {
-        const eventToFinalize = toNostrEventGov(rawMintEvent);
-        const signedMintEvent = finalizeEventBySig(eventToFinalize, address, sig) as NostrEvent;
+        const signedMintEvent = finalizeEventBySig(rawMintEvent, address, sig) as NostrEvent;
 
         if (!this.relay) {
             throw new Error('Not connected to relay');

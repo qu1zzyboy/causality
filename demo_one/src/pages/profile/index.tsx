@@ -46,7 +46,7 @@ interface SubspaceCardProps {
 }
 
 const HomePage: React.FC = () => {
-  const { authenticated, ready, user } = usePrivy();
+  const { authenticated, ready, user, signMessage } = usePrivy();
   const chartRef = useRef<HTMLDivElement>(null);
   const [userInvites, setUserInvites] = useState<UserInvites | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -298,15 +298,15 @@ const HomePage: React.FC = () => {
       const mintEvent = await nostrService.createMint({ ...values, subspaceID });
       const nostrEvent = toNostrEventGov(mintEvent);
       nostrEvent.pubkey = mpcPublicKey.slice(2);
-      console.log('Nostr Event:', nostrEvent);
 
       // Convert all elements in the tags array to strings
       nostrEvent.tags = nostrEvent.tags.map((tag: any[]) => tag.map(String));
-
-      // Serialize the event
-
-      // Sign the event
-      const signature = await signMessage(nostrEvent);
+      console.log('Nostr Event:', nostrEvent);
+      const messageToSign = serializeEvent(nostrEvent);
+      console.log('Message to sign:', messageToSign);
+      
+      // Use Privy's signMessage from hook
+      const signature = await signMessage(messageToSign);
       if (!signature) {
         throw new Error('Signature failed');
       }
