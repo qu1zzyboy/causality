@@ -82,7 +82,7 @@ const WelcomePage: React.FC = () => {
           />
           <h1 style={{ fontSize: '2rem', marginBottom: '10px' }}>Model graph</h1>
           <p style={{ maxWidth: '400px', margin: '0 auto 30px', lineHeight: '1.5' }}>
-            A one-stop solution to manage your AI models, create, bind, and distribute them with no coding required.
+            Create your fine-tuned large models and corresponding DAOs without coding skills, enabling collaborative model upgrades and rapid issuance of governance tokens.
           </p>
           <Button
             type="primary"

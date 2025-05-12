@@ -237,6 +237,7 @@ export class NostrService {
         console.log('sig', sig);
         console.log('address', address);
         const nostrEvent = toNostrEventGov(proposeEvent);
+        console.log('nostrEvent', nostrEvent);
         const signedProposeEvent = finalizeEventBySig(nostrEvent, address, sig) as NostrEvent;
         console.log('signedProposeEvent', signedProposeEvent);
         if (!this.relay) {
@@ -320,12 +321,13 @@ export class NostrService {
         }
         mintEvent.setTokenInfo(params.tokenName, params.tokenSymbol, params.tokenDecimals);
         mintEvent.setMintDetails(params.initialSupply, params.dropRatio);
+        console.log('mintEvent', mintEvent);
         return mintEvent;
     }
 
     // Publish mint event
     async publishMint(rawMintEvent: any, address: string, sig: string): Promise<NostrEvent> {
-        const eventToFinalize = toNostrEvent(rawMintEvent);
+        const eventToFinalize = toNostrEventGov(rawMintEvent);
         const signedMintEvent = finalizeEventBySig(eventToFinalize, address, sig) as NostrEvent;
 
         if (!this.relay) {
