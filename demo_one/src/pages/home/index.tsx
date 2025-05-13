@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Card, Typography, Input, Button, Space, message } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import { usePrivy } from '@privy-io/react-auth';
@@ -32,6 +32,16 @@ const HomePage: React.FC = () => {
   const [mpcPublicKey, setMpcPublicKey] = useState<string | null>(null);
   
   const { user } = usePrivy();
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     if (user) {
@@ -128,24 +138,23 @@ const HomePage: React.FC = () => {
       {/* Messages Section */}
       {!showSuggestions && messages.length > 0 && (
         <div className={styles.messagesContainer}>
-          <div style={{ marginTop: 'auto' }}>
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`${styles.messageItem} ${msg.isUser ? styles.userMessage : styles.botMessage}`}
-                style={{
-                  opacity: !msg.isUser && index === messages.length - 1 && isLoading ? 0.7 : 1,
-                }}
-              >
-                <div className={styles.messageContent}>
-                  {msg.content}
-                  {!msg.isUser && index === messages.length - 1 && isLoading && (
-                    <span className={styles.cursor}>▋</span>
-                  )}
-                </div>
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`${styles.messageItem} ${msg.isUser ? styles.userMessage : styles.botMessage}`}
+              style={{
+                opacity: !msg.isUser && index === messages.length - 1 && isLoading ? 0.7 : 1,
+              }}
+            >
+              <div className={styles.messageContent}>
+                {msg.content}
+                {!msg.isUser && index === messages.length - 1 && isLoading && (
+                  <span className={styles.cursor}>▋</span>
+                )}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
         </div>
       )}
 
