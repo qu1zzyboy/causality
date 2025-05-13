@@ -38,8 +38,8 @@ export class DifyService {
 
   async sendMessage(
     query: string,
-    conversationId?: string,
-    onMessage: (message: DifyMessage) => void
+    onMessage: (message: DifyMessage) => void,
+    conversationId?: string
   ): Promise<void> {
     try {
       const response = await fetch(`${this.baseURL}/chat-messages`, {
@@ -53,7 +53,7 @@ export class DifyService {
           query,
           response_mode: 'streaming',
           conversation_id: conversationId || '',
-          user: 'user-' + Date.now(), // Generate a unique user ID
+          user: 'user-' + Date.now(),
         }),
       });
 
@@ -78,12 +78,15 @@ export class DifyService {
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.trim()) {
+          if (line.trim() && line.startsWith('data: ')) {
             try {
-              const message = JSON.parse(line) as DifyMessage;
+              // Remove 'data: ' prefix and parse the JSON
+              const jsonStr = line.substring(6);
+              console.log('Parsing message:', jsonStr);
+              const message = JSON.parse(jsonStr) as DifyMessage;
               onMessage(message);
             } catch (e) {
-              console.error('Failed to parse message:', e);
+              console.error('Failed to parse message:', line, e);
             }
           }
         }

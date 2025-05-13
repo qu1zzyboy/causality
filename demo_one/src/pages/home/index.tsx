@@ -1,50 +1,156 @@
-import React from 'react';
-import { Row, Col, Card, Typography, Input, Button, Avatar, Space } from 'antd';
+import React, { useState, useRef, useEffect } from 'react';
+import { Row, Col, Card, Typography, Input, Button, Avatar, Space, message } from 'antd';
 import { SendOutlined, WechatOutlined } from '@ant-design/icons'; // Placeholder for H logo
 import styles from './index.less';
+import { difyService } from '@/services/dify';
 
 const { Title, Text, Paragraph } = Typography;
 
 const suggestionPrompts = [
   {
-    title: 'Help me find information or answer a question',
-    description: 'Quick info, answers, or help searching',
+    title: 'Introduce this project for me?',
+    description: 'Get an overview of the project and its main features',
   },
   {
-    title: 'Help me build my AI Avatar!',
-    description: 'Quick info, answers, or help searching',
+    title: "What's your architecture?",
+    description: 'Learn about the system design and components',
   },
   {
-    title: 'What can I do today?',
-    description: 'Discover tasks, missions, and rewards.',
+    title: 'How does consensus layer play its role?',
+    description: 'Understand the consensus mechanism and its importance',
   },
 ];
 
 const HomePage: React.FC = () => {
+  const [inputValue, setInputValue] = useState<string>('');
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [conversationId, setConversationId] = useState<string>('');
+  const [messages, setMessages] = useState<Array<{ content: string; isUser: boolean }>>([]);
+  const [currentResponse, setCurrentResponse] = useState<string>('');
+
+  const handleSendMessage = async (messageText: string) => {
+    if (!messageText.trim()) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setShowSuggestions(false);
+      
+      // Add user message to the list
+      const userMessage = { content: messageText, isUser: true };
+      setMessages(prev => [...prev, userMessage]);
+
+      // Clear input and reset current response
+      setInputValue('');
+      setCurrentResponse('');
+
+      // Add an initial empty bot message
+      setMessages(prev => [...prev, { content: '', isUser: false }]);
+
+      // Send message to Dify
+      await difyService.sendMessage(
+        messageText,
+        (message) => {
+          if (message.conversation_id) {
+            setConversationId(message.conversation_id);
+          }
+          if (message.answer && message.event === 'message') {
+            setCurrentResponse(prev => {
+              const newResponse = prev + message.answer;
+              // Update the last message in the messages array
+              setMessages(messages => {
+                const newMessages = [...messages];
+                newMessages[newMessages.length - 1] = {
+                  content: newResponse,
+                  isUser: false
+                };
+                return newMessages;
+              });
+              return newResponse;
+            });
+          }
+        },
+        conversationId
+      );
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      message.error('Failed to send message');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePromptClick = (promptTitle: string) => {
+    handleSendMessage(promptTitle);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(inputValue);
+    }
+  };
+
+  // Add debug log for messages state
+  useEffect(() => {
+    console.log('Messages updated:', messages);
+  }, [messages]);
+
   return (
     <div className={styles.homePageContainer}>
-      {/* Top Logo and Title Area */}
+      {/* Title Section - Simplified */}
       <div className={styles.logoTitleSection}>
-        <Avatar size={64} className={styles.hetuLogo}>
-          H
-        </Avatar>
         <Title level={1} className={styles.mainTitle}>
-          Hetu
+          AI4SOS Assistant
         </Title>
-        <Text className={styles.subTitle}>AI Avatar</Text>
+        <Text className={styles.subTitle}>Your Intelligent Partner</Text>
       </div>
 
-      {/* Suggestion Cards Section */}
-      <Row gutter={[24, 24]} className={styles.suggestionCardsRow} justify="center">
-        {[1, 2, 3].map((item) => (
-          <Col key={item} xs={24} sm={24} md={12} lg={8}>
+      {/* Messages Section */}
+      {!showSuggestions && messages.length > 0 && (
+        <div className={styles.messagesContainer}>
+          <div style={{ marginTop: 'auto' }}>
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`${styles.messageItem} ${msg.isUser ? styles.userMessage : styles.botMessage}`}
+                style={{
+                  opacity: !msg.isUser && index === messages.length - 1 && isLoading ? 0.7 : 1,
+                }}
+              >
+                <div className={styles.messageContent}>
+                  {msg.content}
+                  {!msg.isUser && index === messages.length - 1 && isLoading && (
+                    <span className={styles.cursor}>▋</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Single Suggestion Card */}
+      {showSuggestions && (
+        <Row justify="center" align="middle">
+          <Col xs={24} sm={24} md={20} lg={20}>
             <Card className={styles.suggestionCard} bordered={false}>
               <Title level={4} className={styles.cardTitle}>
-                Talk to Hetu Agent – Try asking:
+                Try asking:
               </Title>
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 {suggestionPrompts.map((prompt, index) => (
-                  <div key={index} className={styles.promptBox}>
+                  <div 
+                    key={index} 
+                    className={styles.promptBox}
+                    onClick={() => handlePromptClick(prompt.title)}
+                  >
                     <Text strong>{prompt.title}</Text>
                     <Paragraph type="secondary" className={styles.promptDescription}>
                       {prompt.description}
@@ -54,16 +160,28 @@ const HomePage: React.FC = () => {
               </Space>
             </Card>
           </Col>
-        ))}
-      </Row>
+        </Row>
+      )}
 
-      {/* Bottom Send Message Bar */}
+      {/* Send Message Bar */}
       <div className={styles.sendMessageBar}>
         <Input
           size="large"
           placeholder="Send a message"
           className={styles.messageInput}
-          suffix={<Button type="text" icon={<SendOutlined />} className={styles.sendButton} />}
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyPress={handleKeyPress}
+          disabled={isLoading}
+          suffix={
+            <Button
+              type="text"
+              icon={<SendOutlined />}
+              className={styles.sendButton}
+              onClick={() => handleSendMessage(inputValue)}
+              disabled={isLoading}
+            />
+          }
         />
       </div>
     </div>
