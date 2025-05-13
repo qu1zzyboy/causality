@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Row, Col, Card, Typography, Input, Button, Avatar, Space, message } from 'antd';
-import { SendOutlined, WechatOutlined } from '@ant-design/icons'; // Placeholder for H logo
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Typography, Input, Button, Space, message } from 'antd';
+import { SendOutlined } from '@ant-design/icons';
+import { usePrivy } from '@privy-io/react-auth';
 import styles from './index.less';
 import { difyService } from '@/services/dify';
 
@@ -28,9 +29,25 @@ const HomePage: React.FC = () => {
   const [conversationId, setConversationId] = useState<string>('');
   const [messages, setMessages] = useState<Array<{ content: string; isUser: boolean }>>([]);
   const [currentResponse, setCurrentResponse] = useState<string>('');
+  const [mpcPublicKey, setMpcPublicKey] = useState<string | null>(null);
+  
+  const { user } = usePrivy();
+
+  useEffect(() => {
+    if (user) {
+      const embeddedWallet = user.linkedAccounts.findLast(account => account.type === 'wallet');
+      if (embeddedWallet) {
+        setMpcPublicKey(embeddedWallet.address);
+        console.log('MPC Wallet Address:', embeddedWallet.address);
+      }
+    }
+  }, [user]);
 
   const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim()) {
+    if (!messageText.trim() || !mpcPublicKey) {
+      if (!mpcPublicKey) {
+        message.error('Please connect your wallet first');
+      }
       return;
     }
 
@@ -38,18 +55,14 @@ const HomePage: React.FC = () => {
       setIsLoading(true);
       setShowSuggestions(false);
       
-      // Add user message to the list
       const userMessage = { content: messageText, isUser: true };
       setMessages(prev => [...prev, userMessage]);
 
-      // Clear input and reset current response
       setInputValue('');
       setCurrentResponse('');
 
-      // Add an initial empty bot message
       setMessages(prev => [...prev, { content: '', isUser: false }]);
 
-      // Send message to Dify
       await difyService.sendMessage(
         messageText,
         (message) => {
@@ -59,7 +72,6 @@ const HomePage: React.FC = () => {
           if (message.answer && message.event === 'message') {
             setCurrentResponse(prev => {
               const newResponse = prev + message.answer;
-              // Update the last message in the messages array
               setMessages(messages => {
                 const newMessages = [...messages];
                 newMessages[newMessages.length - 1] = {
@@ -72,6 +84,7 @@ const HomePage: React.FC = () => {
             });
           }
         },
+        mpcPublicKey,  // 使用 MPC 钱包地址
         conversationId
       );
     } catch (error) {

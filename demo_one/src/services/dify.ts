@@ -39,25 +39,45 @@ export class DifyService {
   async sendMessage(
     query: string,
     onMessage: (message: DifyMessage) => void,
+    walletAddress: string,
     conversationId?: string
   ): Promise<void> {
     try {
+      const requestBody = {
+        inputs: {},
+        query,
+        response_mode: 'streaming',
+        conversation_id: conversationId || '',
+        user: walletAddress,
+      };
+
+      console.log('Sending request to Dify:', {
+        url: `${this.baseURL}/chat-messages`,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+        conversationId
+      });
+
       const response = await fetch(`${this.baseURL}/chat-messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          inputs: {},
-          query,
-          response_mode: 'streaming',
-          conversation_id: conversationId || '',
-          user: 'user-' + Date.now(),
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('Dify response status:', response.status);
+      
       if (!response.ok) {
+        console.error('Dify error response:', {
+          status: response.status,
+          statusText: response.statusText,
+        });
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -80,10 +100,14 @@ export class DifyService {
         for (const line of lines) {
           if (line.trim() && line.startsWith('data: ')) {
             try {
-              // Remove 'data: ' prefix and parse the JSON
               const jsonStr = line.substring(6);
-              console.log('Parsing message:', jsonStr);
               const message = JSON.parse(jsonStr) as DifyMessage;
+              console.log('Received Dify message:', {
+                event: message.event,
+                conversation_id: message.conversation_id,
+                message_id: message.message_id,
+                answer: message.answer?.substring(0, 100) + '...'
+              });
               onMessage(message);
             } catch (e) {
               console.error('Failed to parse message:', line, e);
